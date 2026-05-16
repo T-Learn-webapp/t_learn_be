@@ -9,7 +9,7 @@ COPY TLearnBe/*.sln ./
 # Copy csproj files
 COPY TLearnBe/TLearn.API/*.csproj TLearn.API/
 COPY TLearnBe/TLearn.Application/*.csproj TLearn.Application/
-COPY TLearnBe/TLearnDomain/*.csproj TLearn.Domain/
+COPY TLearnBe/TLearn.Domain/*.csproj TLearn.Domain/
 COPY TLearnBe/TLearn.Infrastructure/*.csproj TLearn.Infrastructure/
 COPY TLearnBe/TLearn.Common/*.csproj TLearn.Common/
 
