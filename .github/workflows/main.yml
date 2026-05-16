@@ -21,7 +21,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "10.0.0"
+          dotnet-version: "8.0.x"
 
       # ── 3. Cache NuGet packages ─────────────────
       - name: Cache NuGet packages
