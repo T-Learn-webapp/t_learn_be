@@ -14,7 +14,7 @@ COPY TLearnBe/TLearn.Infrastructure/*.csproj TLearn.Infrastructure/
 COPY TLearnBe/TLearn.Common/*.csproj TLearn.Common/
 
 # Restore dependencies
-RUN dotnet restore TLearnBe/TLearnBe.sln
+RUN dotnet restore TLearnBe.sln
 
 # Copy toàn bộ source
 COPY . .
