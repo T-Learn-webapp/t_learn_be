@@ -10,5 +10,10 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
     {
         builder.Property(s => s.Name).IsRequired().HasMaxLength(200);
         builder.Property(s => s.Color).HasMaxLength(7);
+        
+        builder.HasOne(s => s.User).
+            WithMany(u => u.Subjects)
+            .HasForeignKey(s => s.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

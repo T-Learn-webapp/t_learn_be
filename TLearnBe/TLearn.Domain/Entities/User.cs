@@ -23,7 +23,6 @@ public class User : IdentityUser<Guid>
     public ICollection<UserQuizResult> UserQuizResults{ get; set; } 
     
     
-    public virtual ICollection<Subject> SharedSubjects { get; set; } = new List<Subject>();
     public virtual ICollection<SubjectMember> SubjectMemberships { get; set; } = new List<SubjectMember>();
     
 }

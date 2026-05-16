@@ -5,10 +5,14 @@ using Microsoft.AspNetCore.Mvc;
 using TLearn.Application.Features.Materials.Queries.GetMaterialsBySubject;
 using TLearn.Application.Features.Subjects.Commands.CreateSubject;
 using TLearn.Application.Features.Subjects.Commands.DeleteSubject;
+using TLearn.Application.Features.Subjects.Commands.RemoveMember;
+using TLearn.Application.Features.Subjects.Commands.UpdateMemberPermission;
 using TLearn.Application.Features.Subjects.Commands.UpdateSubject;
+using TLearn.Application.Features.Subjects.DTOs;
 using TLearn.Application.Features.Subjects.Queries.GetMaterialsBySubject;
 using TLearn.Application.Features.Subjects.Queries.GetMySubjects;
 using TLearn.Application.Features.Subjects.Queries.GetSubjectById;
+using TLearn.Application.Features.Subjects.Queries.GetSubjectMembers;
 using TLearn.Application.Features.Subjects.Queries.GetSubjects;
 
 namespace TLearn.API.Controllers;
@@ -161,6 +165,71 @@ public class SubjectsController : ControllerBase
         
         return NoContent();
     }
+    
+    [HttpGet("{id}/members")]
+    public async Task<IActionResult> GetMembers(Guid id, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+        
+        var query = new GetSubjectMembersQuery
+        {
+            SubjectId = id,
+            CurrentUserId = userId,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+        
+        var result = await _mediator.Send(query);
+        
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Error });
+        
+        return Ok(result.Data);
+    }
+
+    // PUT: api/subjects/{subjectId}/members/{memberId}/permission
+    [HttpPut("{subjectId}/members/{memberId}/permission")]
+    public async Task<IActionResult> UpdateMemberPermission(Guid subjectId, Guid memberId, [FromBody] UpdateMemberPermissionDto request)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+        
+        var command = new UpdateMemberPermissionCommand
+        {
+            SubjectId = subjectId,
+            MemberId = memberId,
+            Permission = request.Permission,
+            CurrentUserId = userId
+        };
+        
+        var result = await _mediator.Send(command);
+        
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Error });
+        
+        return Ok(new { message = "Permission updated successfully" });
+    }
+
+    // DELETE: api/subjects/{subjectId}/members/{memberId}
+    [HttpDelete("{subjectId}/members/{memberId}")]
+    public async Task<IActionResult> RemoveMember(Guid subjectId, Guid memberId)
+    {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+        
+        var command = new RemoveMemberCommand
+        {
+            SubjectId = subjectId,
+            MemberId = memberId,
+            CurrentUserId = userId
+        };
+        
+        var result = await _mediator.Send(command);
+        
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Error });
+        
+        return Ok(new { message = "Member removed successfully" });
+    }
+    
 
     private Guid GetUserId()
     {

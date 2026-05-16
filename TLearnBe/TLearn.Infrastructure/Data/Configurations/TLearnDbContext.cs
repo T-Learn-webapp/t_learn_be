@@ -20,6 +20,8 @@ public class TLearnDbContext : IdentityDbContext<User, Role, Guid>
     public DbSet<Subscription> Subscriptions { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<UserQuizResult> UserQuizResults { get; set; }
+    public DbSet<SubjectMember> SubjectMembers { get; set; }
+    public DbSet<SubjectInvitation> SubjectInvitations { get; set; }
     public DbSet<UserQuizAnswer> UserQuizAnswers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

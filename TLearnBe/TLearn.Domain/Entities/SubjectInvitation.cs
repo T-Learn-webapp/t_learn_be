@@ -16,4 +16,13 @@ public class SubjectInvitation
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int RetryCount { get; set; }
     public DateTime? LastSentAt { get; set; }
+    public Guid? AcceptedUserId { get; set; }
+    public InvitationStatus Status { get; set; } = InvitationStatus.Pending;
 }
+    public enum InvitationStatus
+    {
+        Pending = 1,      // Chờ xử lý
+        Accepted = 2,     // Đã chấp nhận
+        Expired = 3,      // Hết hạn
+        Cancelled = 4     // Chủ subject hủy
+    }

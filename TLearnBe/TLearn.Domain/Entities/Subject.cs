@@ -9,8 +9,8 @@ public class Subject
     public string? Icon { get; set; }
     public bool IsPublic { get; set; } = true;
 
-    public Guid? UserId { get; set; }
-    public User? User { get; set; }
+    public Guid UserId { get; set; }
+    public User User { get; set; }
 
     public ICollection<LearningMaterial> Materials { get; set; }
     public ICollection<Quiz> Quizzes { get; set; } 

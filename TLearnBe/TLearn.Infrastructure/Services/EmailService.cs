@@ -6,6 +6,11 @@ namespace TLearn.Infrastructure.Services;
 
 public interface IEmailService
 {
+    
+    Task SendSubjectInvitationEmail(string to, string subjectName, string acceptLink, string permission, string? userName = null);
+    
+    Task SendSubjectRegistrationInvitationEmail(string to, string subjectName, string registerLink, string permission, string inviterName);
+    Task SendEmailAsync(string to, string subject, string body, bool isHtml = true);
     Task SendVerificationEmail(string to, string verificationLink);
 }
 public class EmailService : IEmailService
@@ -15,6 +20,33 @@ public class EmailService : IEmailService
     public EmailService(IConfiguration config)
     {
         _config = config;
+    }
+
+    public async Task SendEmailAsync(string to, string subject, string body, bool isHtml = true)
+    {
+        var smtpServer = _config["Email:SmtpServer"];
+        var smtpPort = int.Parse(_config["Email:SmtpPort"]!);
+        var username = _config["Email:Username"];
+        var password = _config["Email:Password"];
+        var from = _config["Email:From"];
+
+        using var smtpClient = new SmtpClient(smtpServer, smtpPort)
+        {
+            Credentials = new NetworkCredential(username, password),
+            EnableSsl = true
+        };
+
+        var message = new MailMessage
+        {
+            From = new MailAddress(from!),
+            Subject = subject,
+            Body = body,
+            IsBodyHtml = isHtml
+        };
+
+        message.To.Add(to);
+
+        await smtpClient.SendMailAsync(message);
     }
 
     public async Task SendVerificationEmail(string to, string verificationLink)
@@ -56,4 +88,74 @@ public class EmailService : IEmailService
 
         await client.SendMailAsync(mail);
     }
+    
+    public async Task SendSubjectInvitationEmail(string to, string subjectName, string acceptLink, string permission, string? userName = null)
+{
+    var greeting = string.IsNullOrEmpty(userName) ? "Hello" : $"Hello {userName}";
+    var permissionText = GetPermissionText(permission);
+    
+    var subject = $"Invitation to join {subjectName} on LearnFlash";
+    var body = $@"
+        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <h2 style='color: #4F46E5;'>Subject Invitation</h2>
+            <p>{greeting},</p>
+            <p>You have been invited to join <strong>{subjectName}</strong> with <strong>{permissionText}</strong> permissions.</p>
+            <div style='text-align: center; margin: 30px 0;'>
+                <a href='{acceptLink}' 
+                   style='background-color: #4F46E5; color: white; padding: 12px 24px; 
+                          text-decoration: none; border-radius: 5px; display: inline-block;'>
+                    Accept Invitation
+                </a>
+            </div>
+            <p>This invitation will expire in 7 days.</p>
+            <hr style='margin: 20px 0;' />
+            <p style='color: #6B7280; font-size: 12px;'>
+                If you didn't expect this invitation, you can ignore this email.
+            </p>
+        </div>
+    ";
+    
+    await SendEmailAsync(to, subject, body);
+}
+
+public async Task SendSubjectRegistrationInvitationEmail(string to, string subjectName, string registerLink, string permission, string inviterName)
+{
+    var permissionText = GetPermissionText(permission);
+    
+    var subject = $"{inviterName} invited you to join {subjectName} on LearnFlash";
+    var body = $@"
+        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;'>
+            <h2 style='color: #4F46E5;'>You're Invited!</h2>
+            <p><strong>{inviterName}</strong> has invited you to join <strong>{subjectName}</strong> on LearnFlash.</p>
+            <p>You will have <strong>{permissionText}</strong> permissions.</p>
+            <p>To accept this invitation, please create a free account first:</p>
+            <div style='text-align: center; margin: 30px 0;'>
+                <a href='{registerLink}' 
+                   style='background-color: #4F46E5; color: white; padding: 12px 24px; 
+                          text-decoration: none; border-radius: 5px; display: inline-block;'>
+                    Create Account & Accept Invitation
+                </a>
+            </div>
+            <p>This invitation will expire in 7 days.</p>
+            <hr style='margin: 20px 0;' />
+            <p style='color: #6B7280; font-size: 12px;'>
+                Already have an account? <a href='{_config["FrontendUrl"]}/login?email={Uri.EscapeDataString(to)}'>Login here</a>
+            </p>
+        </div>
+    ";
+    
+    await SendEmailAsync(to, subject, body);
+}
+
+private string GetPermissionText(string permission)
+{
+    return permission switch
+    {
+        "ViewOnly" => "view only",
+        "Comment" => "view and comment",
+        "Edit" => "edit content",
+        "Manage" => "manage members",
+        _ => "view"
+    };
+}
 }
