@@ -4,6 +4,7 @@ name: CI — Build & Test
 on:
   push:
     branches: ["main"]
+
   pull_request:
     branches: ["main"]
 
@@ -17,36 +18,41 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      # ── 2. Cài .NET SDK ─────────────────────────
+      # ── 2. Show structure ──────────────────────
+      - name: Show structure
+        run: find . \( -name "*.sln" -o -name "*.csproj" \)
+
+      # ── 3. Setup .NET SDK ──────────────────────
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
-      # ── 3. Cache NuGet packages ─────────────────
+      # ── 4. Cache NuGet ─────────────────────────
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-          restore-keys: ${{ runner.os }}-nuget-
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-      # ── 4. Restore dependencies ─────────────────
+      # ── 5. Restore ─────────────────────────────
       - name: Restore dependencies
         run: dotnet restore TlearnBE/TLearnBe.sln
 
-      # ── 5. Build ────────────────────────────────
+      # ── 6. Build ───────────────────────────────
       - name: Build
-        run: dotnet build TlearnBE/TLearnBe.sln --no-restore -c Release 
+        run: dotnet build TlearnBE/TLearnBe.sln --no-restore -c Release
 
-      # ── 6. Run tests ────────────────────────────
+      # ── 7. Test ────────────────────────────────
       - name: Run tests
         run: dotnet test TlearnBE/TLearnBe.sln --no-build -c Release --verbosity normal
 
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: build-and-test  # chỉ chạy nếu job trên pass
+    needs: build-and-test
 
     steps:
       - name: Checkout source code
