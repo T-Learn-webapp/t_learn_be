@@ -1,38 +1,36 @@
 # ── Stage 1: Build ──────────────────────────────
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 WORKDIR /src
 
-# Copy solution và csproj trước để tận dụng cache
-COPY *.sln ./
+# Copy solution file
+COPY TLearnBe/*.sln ./
 
-# Copy các file csproj
+# Copy csproj files
 COPY TLearnBe/TLearn.API/*.csproj TLearn.API/
 COPY TLearnBe/TLearn.Application/*.csproj TLearn.Application/
-COPY TLearnBe/TLearn.Domain/*.csproj TLearn.Domain/
+COPY TLearnBe/TLearnDomain/*.csproj TLearn.Domain/
 COPY TLearnBe/TLearn.Infrastructure/*.csproj TLearn.Infrastructure/
 COPY TLearnBe/TLearn.Common/*.csproj TLearn.Common/
 
-# Restore dependencies
+# Restore
 RUN dotnet restore TLearnBe.sln
 
-# Copy toàn bộ source
+# Copy full source
 COPY . .
 
-# Publish project
+# Publish
 RUN dotnet publish TLearnBe/TLearn.API/TLearn.API.csproj \
     -c Release \
     -o /app/publish
 
-# ── Stage 2: Runtime ────────────────────────────
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# ── Runtime ─────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 
 WORKDIR /app
 
-# Copy output từ build stage
 COPY --from=build /app/publish .
 
-# Expose port
 EXPOSE 8080
 
 ENV ASPNETCORE_URLS=http://+:8080
