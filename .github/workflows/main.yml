@@ -33,7 +33,7 @@ jobs:
 
       # ── 4. Restore dependencies ─────────────────
       - name: Restore dependencies
-        run: dotnet restore /TlearnBE/TLearnBe.sln
+        run: dotnet restore TlearnBE/TLearnBe.sln
 
       # ── 5. Build ────────────────────────────────
       - name: Build
