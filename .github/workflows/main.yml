@@ -39,15 +39,15 @@ jobs:
 
       # ── 5. Restore ─────────────────────────────
       - name: Restore dependencies
-        run: dotnet restore TlearnBe/TLearnBe.sln
+        run: dotnet restore TLearnBe/TLearnBe.sln
 
       # ── 6. Build ───────────────────────────────
       - name: Build
-        run: dotnet build TlearnBe/TLearnBe.sln --no-restore -c Release
+        run: dotnet build TLearnBe/TLearnBe.sln --no-restore -c Release
 
       # ── 7. Test ────────────────────────────────
       - name: Run tests
-        run: dotnet test TlearnBe/TLearnBe.sln --no-build -c Release --verbosity normal
+        run: dotnet test TLearnBe/TLearnBe.sln --no-build -c Release --verbosity normal
 
   docker-build:
     name: Docker Build
