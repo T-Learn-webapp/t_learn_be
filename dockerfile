@@ -7,19 +7,20 @@ WORKDIR /src
 COPY *.sln ./
 
 # Copy các file csproj
-COPY TLearn.API/*.csproj TLearn.API/
-COPY TLearn.Application/*.csproj TLearn.Application/
-COPY TLearn.Domain/*.csproj TLearn.Domain/
-COPY TLearn.Infrastructure/*.csproj TLearn.Infrastructure/
+COPY TLearnBe/TLearn.API/*.csproj TLearn.API/
+COPY TLearnBe/TLearn.Application/*.csproj TLearn.Application/
+COPY TLearnBe/TLearn.Domain/*.csproj TLearn.Domain/
+COPY TLearnBe/TLearn.Infrastructure/*.csproj TLearn.Infrastructure/
+COPY TLearnBe/TLearn.Common/*.csproj TLearn.Common/
 
 # Restore dependencies
-RUN dotnet restore
+RUN dotnet restore TLearnBe/TLearnBe.sln
 
 # Copy toàn bộ source
 COPY . .
 
 # Publish project
-RUN dotnet publish TLearn.API/TLearn.API.csproj \
+RUN dotnet publish TLearnBe/TLearn.API/TLearn.API.csproj \
     -c Release \
     -o /app/publish
 
