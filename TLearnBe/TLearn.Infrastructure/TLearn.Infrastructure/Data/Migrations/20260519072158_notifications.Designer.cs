@@ -12,8 +12,8 @@ using TLearn.Infrastructure.Data.Configurations;
 namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(TLearnDbContext))]
-    [Migration("20260515042231_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260519072158_notifications")]
+    partial class notifications
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -190,6 +190,12 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsCollaborative")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastSyncedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid>("SubjectId")
                         .HasColumnType("uniqueidentifier");
 
@@ -206,6 +212,12 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("YjsSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SubjectId");
@@ -213,6 +225,55 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("LearningMaterials");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActionUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("IsRead");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.Payment", b =>
@@ -494,7 +555,7 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -502,6 +563,113 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Subjects");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.SubjectInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AcceptedUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InviteToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("InvitedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Permission")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("InviteToken")
+                        .IsUnique();
+
+                    b.HasIndex("InvitedBy");
+
+                    b.HasIndex("SubjectId");
+
+                    b.ToTable("SubjectInvitations");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.SubjectMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("InvitedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<DateTime?>("LastViewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Permission")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitedBy");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("SubjectId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("SubjectMembers");
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.Subscription", b =>
@@ -538,6 +706,75 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Subscriptions");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.TodoAssignment", b =>
+                {
+                    b.Property<Guid>("TodoItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("TodoItemId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TodoAssignments");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.TodoItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("LearningMaterialId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("LearningMaterialId1")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("LearningMaterialId");
+
+                    b.HasIndex("LearningMaterialId1");
+
+                    b.ToTable("TodoItems");
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.User", b =>
@@ -862,6 +1099,17 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TLearn.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("TLearn.Domain.Entities.User", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TLearn.Domain.Entities.Payment", b =>
                 {
                     b.HasOne("TLearn.Domain.Entities.User", "User")
@@ -954,7 +1202,54 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                 {
                     b.HasOne("TLearn.Domain.Entities.User", "User")
                         .WithMany("Subjects")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.SubjectInvitation", b =>
+                {
+                    b.HasOne("TLearn.Domain.Entities.User", "Inviter")
+                        .WithMany()
+                        .HasForeignKey("InvitedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TLearn.Domain.Entities.Subject", "Subject")
+                        .WithMany("Invitations")
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Inviter");
+
+                    b.Navigation("Subject");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.SubjectMember", b =>
+                {
+                    b.HasOne("TLearn.Domain.Entities.User", "Inviter")
+                        .WithMany()
+                        .HasForeignKey("InvitedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("TLearn.Domain.Entities.Subject", "Subject")
+                        .WithMany("Members")
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TLearn.Domain.Entities.User", "User")
+                        .WithMany("SubjectMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Inviter");
+
+                    b.Navigation("Subject");
 
                     b.Navigation("User");
                 });
@@ -968,6 +1263,48 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.TodoAssignment", b =>
+                {
+                    b.HasOne("TLearn.Domain.Entities.TodoItem", "TodoItem")
+                        .WithMany("Assignments")
+                        .HasForeignKey("TodoItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TLearn.Domain.Entities.User", "User")
+                        .WithMany("TodoAssignments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TodoItem");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.TodoItem", b =>
+                {
+                    b.HasOne("TLearn.Domain.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("TLearn.Domain.Entities.LearningMaterial", "LearningMaterial")
+                        .WithMany()
+                        .HasForeignKey("LearningMaterialId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("TLearn.Domain.Entities.LearningMaterial", null)
+                        .WithMany("TodoItems")
+                        .HasForeignKey("LearningMaterialId1");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("LearningMaterial");
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.UserProgress", b =>
@@ -1049,6 +1386,8 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
             modelBuilder.Entity("TLearn.Domain.Entities.LearningMaterial", b =>
                 {
                     b.Navigation("Flashcards");
+
+                    b.Navigation("TodoItems");
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.Question", b =>
@@ -1072,9 +1411,18 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("TLearn.Domain.Entities.Subject", b =>
                 {
+                    b.Navigation("Invitations");
+
                     b.Navigation("Materials");
 
+                    b.Navigation("Members");
+
                     b.Navigation("Quizzes");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.TodoItem", b =>
+                {
+                    b.Navigation("Assignments");
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.User", b =>
@@ -1083,15 +1431,21 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 
                     b.Navigation("LearningMaterials");
 
+                    b.Navigation("Notifications");
+
                     b.Navigation("Payments");
 
                     b.Navigation("Progresses");
 
                     b.Navigation("Quizzes");
 
+                    b.Navigation("SubjectMemberships");
+
                     b.Navigation("Subjects");
 
                     b.Navigation("Subscriptions");
+
+                    b.Navigation("TodoAssignments");
 
                     b.Navigation("UserQuizResults");
                 });

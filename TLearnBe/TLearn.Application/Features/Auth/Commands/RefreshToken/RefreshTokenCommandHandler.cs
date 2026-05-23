@@ -24,50 +24,104 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
         _redisService = redisService;
     }
 
-    public async Task<Result<AuthResponse>> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
+   public async Task<Result<AuthResponse>> Handle(
+    RefreshTokenCommand request,
+    CancellationToken cancellationToken)
+{
+    if (string.IsNullOrWhiteSpace(request.RefreshToken))
     {
-        
-        var principal = _tokenService.GetPrincipalFromExpiredToken(request.AccessToken);
-        if (principal == null)
-            return Result<AuthResponse>.Unauthorized("Invalid access token");
+        return Result<AuthResponse>.Unauthorized(
+            "Invalid refresh token"
+        );
+    }
 
-        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return Result<AuthResponse>.Unauthorized("Invalid token");
+    // parse userId từ token
+    var parts = request.RefreshToken.Split(':');
 
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-            return Result<AuthResponse>.Unauthorized("User not found");
+    if (
+        parts.Length != 2 ||
+        !Guid.TryParse(parts[0], out var userId)
+    )
+    {
+        return Result<AuthResponse>.Unauthorized(
+            "Invalid refresh token format"
+        );
+    }
 
-        // Validate refresh token
-        var isValid = await _redisService.IsRefreshTokenValidAsync(user.Id, request.RefreshToken);
-        if (!isValid)
-            return Result<AuthResponse>.Unauthorized("Invalid refresh token");
+    var user =
+        await _userManager.FindByIdAsync(
+            userId.ToString()
+        );
 
-        // Revoke old refresh token
-        await _redisService.RevokeRefreshTokenAsync(user.Id, request.RefreshToken);
+    if (user == null)
+    {
+        return Result<AuthResponse>.Unauthorized(
+            "User not found"
+        );
+    }
 
-        // Generate new tokens
-        var newAccessToken = _tokenService.GenerateAccessToken(user);
-        var newRefreshToken = _tokenService.GenerateRefreshToken();
+    // validate refresh token
+    var isValid =
+        await _redisService.IsRefreshTokenValidAsync(
+            userId,
+            request.RefreshToken
+        );
 
-        // Save new refresh token
-        await _redisService.SetRefreshTokenAsync(user.Id, newRefreshToken, DateTime.UtcNow.AddDays(7));
+    if (!isValid)
+    {
+        return Result<AuthResponse>.Unauthorized(
+            "Invalid refresh token"
+        );
+    }
 
-        return Result<AuthResponse>.Success(new AuthResponse
+    // revoke token cũ
+    await _redisService.RevokeRefreshTokenAsync(
+        userId,
+        request.RefreshToken
+    );
+
+    // generate token mới
+    var newAccessToken =
+        _tokenService.GenerateAccessToken(user);
+
+    var newRefreshToken =
+        _tokenService.GenerateRefreshToken();
+
+    // save token mới
+    await _redisService.SetRefreshTokenAsync(
+        user.Id,
+        newRefreshToken,
+        DateTime.UtcNow.AddDays(7)
+    );
+
+    return Result<AuthResponse>.Success(
+        new AuthResponse
         {
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken,
-            AccessTokenExpiry = DateTime.UtcNow.AddMinutes(15),
-            RefreshTokenExpiry = DateTime.UtcNow.AddDays(7),
+
+            AccessTokenExpiry =
+                DateTime.UtcNow.AddMinutes(15),
+
+            RefreshTokenExpiry =
+                DateTime.UtcNow.AddDays(7),
+
             User = new UserDto
             {
                 Id = user.Id,
-                FullName = user.FullName ?? string.Empty,
-                Email = user.Email ?? string.Empty,
-                SubscriptionType = user.SubscriptionType ?? "Free",
-                EmailConfirmed = user.EmailConfirmed
+                FullName =
+                    user.FullName ?? string.Empty,
+
+                Email =
+                    user.Email ?? string.Empty,
+
+                SubscriptionType =
+                    user.SubscriptionType ?? "Free",
+
+                EmailConfirmed =
+                    user.EmailConfirmed
             }
-        });
-    }
+        }
+    );
+}
 }

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using StackExchange.Redis;
+using TLearn.API.Extensions;
+using TLearn.API.Hubs;
 using TLearn.Infrastructure.Data.Configurations;
 using TLearn.Infrastructure.Services;
 
@@ -44,45 +46,69 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
     
-    // SignalR needs this
+    // SignalR JWT handling
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
+            // For WebSocket connections
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/collaborationHub"))
             {
                 context.Token = accessToken;
+                return Task.CompletedTask;
             }
+            
+            // For HTTP requests - get from cookie
+            var tokenFromCookie = context.Request.Cookies["accessToken"];
+            if (!string.IsNullOrEmpty(tokenFromCookie))
+            {
+                context.Token = tokenFromCookie;
+            }
+            
             return Task.CompletedTask;
         }
     };
 });
-//DI
+
+
+
+
+// === DI Services ===
+builder.Services.AddHttpContextAccessor(); 
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IRedisService, RedisService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
-
-//Redis
-
+builder.Services.AddScoped<INotificationService,NotificationService>();
+// === Redis ===
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
     var configuration = builder.Configuration["Redis:ConnectionString"];
-
     return ConnectionMultiplexer.Connect(configuration!);
 });
-// === Add Authorization ===
+
+// === SignalR ===
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 102400; // 100KB
+});
+
+// === Authorization ===
 builder.Services.AddAuthorization();
 
 // === CORS ===
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    options.AddPolicy("AllowNextJs", policy =>
     {
-        policy.AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        policy.WithOrigins("http://localhost:3000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials(); // Quan trọng cho WebSocket
     });
 });
 
@@ -97,14 +123,25 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors();
 
-app.UseAuthentication(); // Phải có
-app.UseAuthorization();  // Phải có
+// WebSocket middleware - phải ở đầu pipeline
+app.UseWebSockets(new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromSeconds(120)
+});
 
+// CORS
+app.UseCors("AllowNextJs");
+
+// Authentication & Authorization
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Map endpoints
 app.MapControllers();
-
-// Run migrations automatically (optional)
+app.MapHub<CollaborationHub>("/collaborationHub");
+app.MapSignalRHub();
+// Run migrations
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<TLearnDbContext>();

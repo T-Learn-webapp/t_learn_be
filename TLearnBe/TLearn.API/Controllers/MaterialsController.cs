@@ -2,10 +2,15 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TLearn.Application.Features.Materials.Commands.CreateMaterial;
 using TLearn.Application.Features.Materials.Commands.DeleteMaterial;
 using TLearn.Application.Features.Materials.Commands.UpdateMaterial;
+using TLearn.Application.Features.Materials.DTOs;
 using TLearn.Application.Features.Materials.Queries.GetMaterialById;
+using TLearn.Common;
+using TLearn.Domain.Entities;
+using TLearn.Infrastructure.Data.Configurations;
 
 namespace TLearn.API.Controllers;
 
@@ -15,10 +20,11 @@ namespace TLearn.API.Controllers;
 public class MaterialsController : ControllerBase
 {
     private readonly IMediator _mediator;
-
-    public MaterialsController(IMediator mediator)
+    private readonly TLearnDbContext _context;
+    public MaterialsController(IMediator mediator,TLearnDbContext context)
     {
         _mediator = mediator;
+        _context = context;
     }
 
     
@@ -71,6 +77,76 @@ public class MaterialsController : ControllerBase
             return BadRequest(new { message = result.Error });
         
         return NoContent();
+    }
+    
+    [HttpGet("{id}/collaboration-info")]
+    public async Task<IActionResult> GetCollaborationInfo(Guid id)
+    {
+        var userId = GetUserId();
+        var material = await _context.LearningMaterials
+            .Include(m => m.Subject)
+            .FirstOrDefaultAsync(m => m.Id == id);
+    
+        if (material == null)
+            return NotFound();
+    
+        // Check permission
+        if (!material.Subject.CanUserView(userId))
+            return Forbid();
+    
+        // Generate SignalR token
+        var hubToken = GenerateHubToken(userId.ToString(), material.Id.ToString());
+        var result = Result<object>.Success(new
+        {
+            materialId = material.Id,
+            materialTitle = material.Title,
+            subjectId = material.SubjectId,
+            hubUrl = "/collaborationHub",
+            hubToken = hubToken,
+            version = material.Version,
+            snapshot = material.YjsSnapshot,  // Initial snapshot
+            isCollaborative = material.IsCollaborative
+        });
+        // return Ok(new
+        // {
+        //     materialId = material.Id,
+        //     materialTitle = material.Title,
+        //     subjectId = material.SubjectId,
+        //     hubUrl = "/collaborationHub",
+        //     hubToken = hubToken,
+        //     version = material.Version,
+        //     snapshot = material.YjsSnapshot,  // Initial snapshot
+        //     isCollaborative = material.IsCollaborative
+        // });
+        return Ok(result);
+    }
+
+    [HttpPut("{id}/collaborative")]
+    public async Task<IActionResult> ToggleCollaborative(Guid id, [FromBody] bool isCollaborative)
+    {
+        var userId = GetUserId();
+        var material = await _context.LearningMaterials
+            .Include(m => m.Subject)
+            .FirstOrDefaultAsync(m => m.Id == id);
+    
+        if (material == null)
+            return NotFound();
+    
+        if (material.UserId != userId && !material.Subject.CanUserManage(userId))
+            return Forbid();
+    
+        material.IsCollaborative = isCollaborative;
+        await _context.SaveChangesAsync();
+    
+        return Ok(new { isCollaborative = material.IsCollaborative });
+    }
+
+    private string GenerateHubToken(string userId, string materialId)
+    {
+        // Simple token for SignalR connection
+        // In production, use JWT or built-in SignalR access token
+        var payload = $"{userId}|{materialId}|{DateTime.UtcNow.Ticks}";
+        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(payload));
     }
 
     private Guid GetUserId()

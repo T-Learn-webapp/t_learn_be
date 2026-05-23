@@ -13,6 +13,7 @@ public class User : IdentityUser<Guid>
     public string SubscriptionType { get; set; } = "Free";
 
     // Navigation Properties
+    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     public ICollection<Subject> Subjects { get; set; } 
     public ICollection<LearningMaterial> LearningMaterials { get; set; }
     public ICollection<Quiz> Quizzes { get; set; } 
@@ -22,6 +23,8 @@ public class User : IdentityUser<Guid>
     public ICollection<StudyRoom> HostedRooms { get; set; } 
     public ICollection<UserQuizResult> UserQuizResults{ get; set; } 
     
+    public ICollection<TodoAssignment> TodoAssignments{ get; set; } 
+
     
     public virtual ICollection<SubjectMember> SubjectMemberships { get; set; } = new List<SubjectMember>();
     

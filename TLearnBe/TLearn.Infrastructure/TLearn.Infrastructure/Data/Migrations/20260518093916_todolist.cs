@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class todolist : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -202,7 +202,7 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     Color = table.Column<string>(type: "nvarchar(7)", maxLength: 7, nullable: true),
                     Icon = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsPublic = table.Column<bool>(type: "bit", nullable: false),
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -212,7 +212,8 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                         name: "FK_Subjects_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -249,6 +250,10 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     Summary = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SubjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    YjsSnapshot = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Version = table.Column<long>(type: "bigint", nullable: false),
+                    LastSyncedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsCollaborative = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -300,6 +305,77 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SubjectInvitations",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SubjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
+                    Permission = table.Column<int>(type: "int", nullable: false),
+                    InviteToken = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    InvitedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsUsed = table.Column<bool>(type: "bit", nullable: false),
+                    UsedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    RetryCount = table.Column<int>(type: "int", nullable: false),
+                    LastSentAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AcceptedUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SubjectInvitations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SubjectInvitations_AspNetUsers_InvitedBy",
+                        column: x => x.InvitedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_SubjectInvitations_Subjects_SubjectId",
+                        column: x => x.SubjectId,
+                        principalTable: "Subjects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SubjectMembers",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SubjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Permission = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    JoinedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    InvitedBy = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    LastViewedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SubjectMembers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SubjectMembers_AspNetUsers_InvitedBy",
+                        column: x => x.InvitedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_SubjectMembers_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_SubjectMembers_Subjects_SubjectId",
+                        column: x => x.SubjectId,
+                        principalTable: "Subjects",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Flashcards",
                 columns: table => new
                 {
@@ -325,6 +401,43 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                         principalTable: "LearningMaterials",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TodoItems",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    DueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LearningMaterialId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LearningMaterialId1 = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TodoItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TodoItems_AspNetUsers_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TodoItems_LearningMaterials_LearningMaterialId",
+                        column: x => x.LearningMaterialId,
+                        principalTable: "LearningMaterials",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_TodoItems_LearningMaterials_LearningMaterialId1",
+                        column: x => x.LearningMaterialId1,
+                        principalTable: "LearningMaterials",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -394,6 +507,33 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                         principalTable: "Subjects",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TodoAssignments",
+                columns: table => new
+                {
+                    TodoItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TodoAssignments", x => new { x.TodoItemId, x.UserId });
+                    table.ForeignKey(
+                        name: "FK_TodoAssignments_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_TodoAssignments_TodoItems_TodoItemId",
+                        column: x => x.TodoItemId,
+                        principalTable: "TodoItems",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -648,6 +788,48 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                 column: "SubjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_SubjectInvitations_Email",
+                table: "SubjectInvitations",
+                column: "Email");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SubjectInvitations_ExpiresAt",
+                table: "SubjectInvitations",
+                column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SubjectInvitations_InvitedBy",
+                table: "SubjectInvitations",
+                column: "InvitedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SubjectInvitations_InviteToken",
+                table: "SubjectInvitations",
+                column: "InviteToken",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SubjectInvitations_SubjectId",
+                table: "SubjectInvitations",
+                column: "SubjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SubjectMembers_InvitedBy",
+                table: "SubjectMembers",
+                column: "InvitedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SubjectMembers_SubjectId_UserId",
+                table: "SubjectMembers",
+                columns: new[] { "SubjectId", "UserId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SubjectMembers_UserId",
+                table: "SubjectMembers",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Subjects_UserId",
                 table: "Subjects",
                 column: "UserId");
@@ -656,6 +838,26 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                 name: "IX_Subscriptions_UserId",
                 table: "Subscriptions",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TodoAssignments_UserId",
+                table: "TodoAssignments",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TodoItems_CreatedById",
+                table: "TodoItems",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TodoItems_LearningMaterialId",
+                table: "TodoItems",
+                column: "LearningMaterialId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TodoItems_LearningMaterialId1",
+                table: "TodoItems",
+                column: "LearningMaterialId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserProgresses_FlashcardId",
@@ -728,7 +930,16 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                 name: "StudyRoomParticipants");
 
             migrationBuilder.DropTable(
+                name: "SubjectInvitations");
+
+            migrationBuilder.DropTable(
+                name: "SubjectMembers");
+
+            migrationBuilder.DropTable(
                 name: "Subscriptions");
+
+            migrationBuilder.DropTable(
+                name: "TodoAssignments");
 
             migrationBuilder.DropTable(
                 name: "UserProgresses");
@@ -738,6 +949,9 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "TodoItems");
 
             migrationBuilder.DropTable(
                 name: "Flashcards");

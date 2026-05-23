@@ -10,6 +10,7 @@ using TLearn.Application.Features.Auth.Commands.Register;
 using TLearn.Application.Features.Auth.Commands.ResendVerification;
 using TLearn.Application.Features.Auth.Commands.VerifyEmail;
 using TLearn.Application.Features.Auth.DTOs;
+using TLearn.Application.Features.Auth.Queries;
 using TLearn.Infrastructure.Services;
 
 namespace TLearn.API.Controllers;
@@ -40,35 +41,132 @@ public class AuthController : ControllerBase
         var result = await _mediator.Send(command);
         return Ok(result);
     }
+    [Authorize]
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<IActionResult> GetMe()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { message = "User not authenticated" });
+    
+        var query = new GetMeQuery { UserId = Guid.Parse(userId) };
+        var result = await _mediator.Send(query);
+    
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Error });
+    
+        return Ok(result); // result.Data là UserDto, đã khớp với interface
+    }
     
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody]LoginCommand command)
+    public async Task<IActionResult> Login(
+        [FromBody] LoginCommand command)
     {
         var result = await _mediator.Send(command);
-        
+
         if (!result.IsSuccess)
         {
             if (result.IsUnauthorized)
-                return Unauthorized(new { message = result.Error });
-            return BadRequest(new { message = result.Error });
+            {
+                return Unauthorized(new
+                {
+                    message = result.Error
+                });
+            }
+
+            return BadRequest(new
+            {
+                message = result.Error
+            });
         }
-        
-        return Ok(result.Data);
+
+        Response.Cookies.Append(
+            "accessToken",
+            result.Data.AccessToken,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false, // localhost HTTP
+                SameSite = SameSiteMode.Lax,
+                Expires = result.Data.AccessTokenExpiry
+            });
+
+        Response.Cookies.Append(
+            "refreshToken",
+            result.Data.RefreshToken,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false,
+                SameSite = SameSiteMode.Lax,
+                Expires = result.Data.RefreshTokenExpiry
+            });
+
+        return Ok(new
+        {
+            user = result.Data.User
+        });
+     
     }
     
     [HttpPost("refresh-token")]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenCommand command)
+    public async Task<IActionResult> RefreshToken()
     {
+        var refreshToken =
+            Request.Cookies["refreshToken"];
+
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            return Unauthorized(new
+            {
+                message = "Refresh token missing"
+            });
+        }
+
+        var command = new RefreshTokenCommand
+        {
+            RefreshToken = refreshToken
+        };
+
         var result = await _mediator.Send(command);
-        
+
         if (!result.IsSuccess)
         {
-            if (result.IsUnauthorized)
-                return Unauthorized(new { message = result.Error });
-            return BadRequest(new { message = result.Error });
+            return Unauthorized(new
+            {
+                message = result.Error
+            });
         }
-        
-        return Ok(result.Data);
+
+        Response.Cookies.Append(
+            "accessToken",
+            result.Data.AccessToken,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false,
+                SameSite = SameSiteMode.Lax,
+                Expires = result.Data.AccessTokenExpiry
+            });
+
+        Response.Cookies.Append(
+            "refreshToken",
+            result.Data.RefreshToken,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false,
+                SameSite = SameSiteMode.Lax,
+                Expires = result.Data.RefreshTokenExpiry
+            });
+
+        return Ok(new
+        {
+            message = "Refresh token success"
+        });
     }
     [Authorize]
     [HttpPost("logout")]

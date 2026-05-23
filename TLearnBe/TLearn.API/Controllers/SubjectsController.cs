@@ -53,7 +53,7 @@ public class SubjectsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(result.Data);
+        return Ok(result);
     }
 
     [HttpGet("my")]
@@ -97,7 +97,7 @@ public class SubjectsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(result.Data);
+        return Ok(result);
     }
 
     [HttpGet("{id}/materials")]
@@ -126,7 +126,7 @@ public class SubjectsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(result.Data);
+        return Ok(result);
     }
 
     [HttpPost]
@@ -138,7 +138,7 @@ public class SubjectsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(result.Data);
+        return Ok(result);
     }
 
     [HttpPut("{id}")]
@@ -151,7 +151,7 @@ public class SubjectsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(result.Data);
+        return Ok(result);
     }
 
     [HttpDelete("{id}")]
@@ -184,7 +184,7 @@ public class SubjectsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(result.Data);
+        return Ok(result);
     }
 
     // PUT: api/subjects/{subjectId}/members/{memberId}/permission

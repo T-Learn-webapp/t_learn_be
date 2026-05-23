@@ -152,7 +152,7 @@ LearnFlash.Common/
 └── LearnFlash.Common.csproj
 
 Add migration:
-dotnet ef migrations add Invite --project TLearn.Infrastructure --startup-project TLearn.API --output-dir TLearn.Infrastructure/Data/Migrations
+dotnet ef migrations add todolist --project TLearn.Infrastructure --startup-project TLearn.API --output-dir TLearn.Infrastructure/Data/Migrations
 
 update Migration :
 dotnet ef database update --project TLearn.Infrastructure --startup-project TLearn.API
