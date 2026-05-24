@@ -41,6 +41,7 @@ public class GetSubjectByIdQueryHandler : IRequestHandler<GetSubjectByIdQuery, R
                 Color = subject.Color,
                 Icon = subject.Icon,
                 IsPublic = subject.IsPublic,
+                OwnerId = subject.UserId,
                 MaterialCount = subject.Materials.Count,
                 CreatedAt = subject.CreatedAt
             });

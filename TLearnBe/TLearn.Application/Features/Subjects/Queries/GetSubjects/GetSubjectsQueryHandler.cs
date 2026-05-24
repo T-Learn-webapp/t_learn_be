@@ -62,6 +62,7 @@ public class GetSubjectsQueryHandler : IRequestHandler<GetSubjectsQuery, Result<
                     Color = s.Color,
                     Icon = s.Icon,
                     IsPublic = s.IsPublic,
+                    OwnerId = s.UserId,
                     MaterialCount = s.Materials.Count,
                     CreatedAt = s.CreatedAt
                 })

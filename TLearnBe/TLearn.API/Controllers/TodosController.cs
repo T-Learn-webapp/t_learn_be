@@ -8,6 +8,7 @@ using TLearn.Application.Features.TodoList.Commands.UpdateTodoItem;
 using TLearn.Application.Features.TodoList.Commands.UpdateTodoStatus;
 using TLearn.Application.Features.TodoList.DTOs;
 using TLearn.Application.Features.TodoList.Queries;
+using TLearn.Application.Features.TodoList.Queries.GetTodoDetails;
 using TLearn.Common;
 using TLearn.Common.Pagination;
 
@@ -33,6 +34,25 @@ public class TodosController : ControllerBase
 
     // =========================
 
+    [HttpGet("{id:guid}")]
+
+    public async Task<IActionResult> GetDetail(
+        Guid id,
+        CancellationToken ct)
+    {
+
+        var result = await _mediator.Send(
+            new GetTodoDetailQuery(id),
+            ct);
+        if (!result.IsSuccess)
+        {
+            return NotFound(result);
+        }
+
+        return Ok(result);
+
+    }
+    
     [HttpPost]
     public async Task<ActionResult<Result<TodoItemDto>>> Create(
         [FromBody] CreateTodoCommand command)

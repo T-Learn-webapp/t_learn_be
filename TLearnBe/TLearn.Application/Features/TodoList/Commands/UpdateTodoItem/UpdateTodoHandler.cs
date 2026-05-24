@@ -95,6 +95,9 @@ public class UpdateTodoHandler
 
                 .ToHashSet();
 
+            if(todo.LearningMaterial.Subject.UserId == currentUserId)
+                subjectMemberIds.Add(currentUserId.Value);
+            
             var invalidUsers = request.AssignedUserIds
 
                 .Where(x => !subjectMemberIds.Contains(x))

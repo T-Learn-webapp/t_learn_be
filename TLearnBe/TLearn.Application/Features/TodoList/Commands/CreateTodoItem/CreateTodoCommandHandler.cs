@@ -85,7 +85,11 @@ public class CreateTodoHandler
                 .Select(x => x.UserId)
                 .ToHashSet();
 
-            // Validate assigned users
+            
+
+            if(material.Subject.UserId == currentUserId)
+                subjectMemberIds.Add(currentUserId.Value);
+            
 
             var invalidUsers = request.AssignedUserIds
                 .Where(x => !subjectMemberIds.Contains(x))

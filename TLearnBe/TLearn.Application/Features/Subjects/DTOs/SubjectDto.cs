@@ -8,6 +8,7 @@ public class SubjectDto
     public string? Color { get; set; }
     public string? Icon { get; set; }
     public bool IsPublic { get; set; }
+    public Guid OwnerId { get; set; }
     public int MaterialCount { get; set; }
     public DateTime CreatedAt { get; set; }
 }
