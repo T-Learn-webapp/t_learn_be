@@ -50,10 +50,11 @@ public class GetTodoDetailHandler
                 UpdatedAt = x.UpdatedAt,
 
                 // Status riêng của current user
-                Status = x.Assignments
-                    .Where(a => a.UserId == currentUserId)
-                    .Select(a => a.Status)
-                    .FirstOrDefault(),
+                // Status = x.Assignments
+                //     .Where(a => a.UserId == currentUserId)
+                //     .Select(a => a.Status)
+                //     .FirstOrDefault(),
+                Status = x.Status,
 
                 AssignedUsers = x.Assignments
                     .Select(a => new TodoAssignedUserDetailDto

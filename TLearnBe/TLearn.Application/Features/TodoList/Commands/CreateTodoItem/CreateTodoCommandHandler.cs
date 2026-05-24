@@ -1,61 +1,56 @@
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using TLearn.Application.Features.TodoList.DTOs;
 using TLearn.Common;
 using TLearn.Domain.Entities;
 using TLearn.Infrastructure.Data.Configurations;
+using TLearn.Infrastructure.Hubs;
 using TLearn.Infrastructure.Services;
 
 namespace TLearn.Application.Features.TodoList.Commands.CreateTodoItem;
 
-public class CreateTodoHandler 
-
+public class CreateTodoHandler
     : IRequestHandler<CreateTodoCommand, Result<TodoItemDto>>
 
 {
-
     private readonly TLearnDbContext _context;
 
     private readonly ICurrentUserService _currentUser;
 
+    private readonly INotificationService _notificationService;
+    private readonly IHubContext<TodoHub> _hubContext;
+
     public CreateTodoHandler(
-
         TLearnDbContext context,
-
-        ICurrentUserService currentUser)
+        INotificationService notificationService,
+        ICurrentUserService currentUser,
+        IHubContext<TodoHub> hubContext)
 
     {
-
         _context = context;
-
+        _hubContext = hubContext;
         _currentUser = currentUser;
-
+        _notificationService = notificationService;
     }
 
     public async Task<Result<TodoItemDto>> Handle(
-
         CreateTodoCommand request,
-
         CancellationToken ct)
 
     {
-
         using var transaction = await _context.Database.BeginTransactionAsync(ct);
 
         try
 
         {
-
             // Lấy material + subject + members
 
             var material = await _context.LearningMaterials
                 .Include(x => x.Subject)
                 .ThenInclude(x => x.Members)
-
                 .FirstOrDefaultAsync(
-
                     x => x.Id == request.LearningMaterialId,
-
                     ct);
 
             if (material == null)
@@ -68,15 +63,14 @@ public class CreateTodoHandler
             var currentUserId = _currentUser.UserId;
             if (!currentUserId.HasValue)
             {
-                
                 return Result<TodoItemDto>
                     .Failure("Chưa đăng nhập");
             }
+
             if (!material.Subject.CanUserEdit(currentUserId.Value))
             {
                 return Result<TodoItemDto>
                     .Failure("Bạn không có quyền tạo todo");
-
             }
 
             // Danh sách member thuộc subject
@@ -85,11 +79,10 @@ public class CreateTodoHandler
                 .Select(x => x.UserId)
                 .ToHashSet();
 
-            
 
-            if(material.Subject.UserId == currentUserId)
+            if (material.Subject.UserId == currentUserId)
                 subjectMemberIds.Add(currentUserId.Value);
-            
+
 
             var invalidUsers = request.AssignedUserIds
                 .Where(x => !subjectMemberIds.Contains(x))
@@ -113,7 +106,6 @@ public class CreateTodoHandler
                 DueDate = request.DueDate,
 
                 CreatedByUserId = currentUserId.Value
-
             };
 
             // Assign nhiều thành viên
@@ -122,16 +114,58 @@ public class CreateTodoHandler
             {
                 todo.Assignments.Add(new TodoAssignment
                 {
-                    TodoItemId  = todo.Id,
+                    TodoItemId = todo.Id,
                     UserId = userId,
                     Status = TodoStatus.Pending
-
                 });
-
             }
+
             _context.TodoItems.Add(todo);
             await _context.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+
+            await _notificationService.CreateManyAsync(
+                request.AssignedUserIds,
+                "Bạn có công việc mới",
+                $"Bạn được assign task: {todo.Title}",
+                NotificationType.TodoAssigned,
+                $"/subjects/{todo.LearningMaterial.Subject.Id}/materials/{todo.LearningMaterial.Id}");
+
+            var realtimeDto = new TodoCreatedRealtimeDto
+
+            {
+                Id = todo.Id,
+
+                LearningMaterialId = todo.LearningMaterialId,
+
+                SubjectId = material.Subject.Id,
+
+                Title = todo.Title,
+
+                Description = todo.Description,
+
+                DueDate = todo.DueDate,
+
+                CreatedByUserId = todo.CreatedByUserId,
+
+                Status = TodoStatus.Pending,
+
+                CreatedAt = todo.CreatedAt
+            };
+            
+            var subjectUserIds = material.Subject.Members
+                .Select(x => x.UserId)
+                .ToHashSet();
+
+            subjectUserIds.Add(material.Subject.UserId);
+
+            foreach (var userId in subjectUserIds)
+            {
+                await _hubContext.Clients
+                    .Group($"user-{userId}")
+                    .SendAsync("TodoCreated", realtimeDto, ct);
+            }
+
             return Result<TodoItemDto>.Success(new TodoItemDto
             {
                 Id = todo.Id,
@@ -154,9 +188,6 @@ public class CreateTodoHandler
             await transaction.RollbackAsync(ct);
             return Result<TodoItemDto>
                 .Failure($"Lỗi khi tạo Todo: {ex.Message}");
-
         }
-
     }
-
 }

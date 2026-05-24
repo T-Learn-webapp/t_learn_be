@@ -251,14 +251,10 @@ public class UpdateTodoAssignmentStatusHandler
                 .SendAsync(
                     "TodoAssignmentUpdated",
                     new
-
                     {
                         TodoId = todo.Id,
-
                         TodoStatus = todo.Status.ToString(),
-
                         AssignmentUserId = assignment.UserId,
-
                         AssignmentStatus = assignment.Status.ToString()
                     },
                     ct);

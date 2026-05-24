@@ -8,6 +8,7 @@ using StackExchange.Redis;
 using TLearn.API.Extensions;
 using TLearn.API.Hubs;
 using TLearn.Infrastructure.Data.Configurations;
+using TLearn.Infrastructure.Hubs;
 using TLearn.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -140,6 +141,7 @@ app.UseAuthorization();
 // Map endpoints
 app.MapControllers();
 app.MapHub<CollaborationHub>("/collaborationHub");
+app.MapHub<TodoHub>("/hubs/todo");
 app.MapSignalRHub();
 // Run migrations
 using (var scope = app.Services.CreateScope())

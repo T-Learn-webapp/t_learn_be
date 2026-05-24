@@ -1,23 +1,23 @@
-LearnFlash.sln
+Tlearn.sln
 └── src/
-    ├── LearnFlash.API/                  # Presentation Layer
-    ├── LearnFlash.Application/          # Application Layer
-    ├── LearnFlash.Domain/               # Domain Layer (Core)
-    ├── LearnFlash.Infrastructure/       # Infrastructure Layer
-    ├── LearnFlash.Common/               # Shared Kernel (optional)
-    └── LearnFlash.Tests/                # Test projects
+    ├── Tlearn.API/                  # Presentation Layer
+    ├── Tlearn.Application/          # Application Layer
+    ├── Tlearn.Domain/               # Domain Layer (Core)
+    ├── Tlearn.Infrastructure/       # Infrastructure Layer
+    ├── Tlearn.Common/               # Shared Kernel (optional)
+    └── Tlearn.Tests/                # Test projects
 
 └── tests/
-    ├── LearnFlash.Application.Tests/
-    ├── LearnFlash.Infrastructure.Tests/
-    └── LearnFlash.API.IntegrationTests/
+    ├── Tlearn.Application.Tests/
+    ├── Tlearn.Infrastructure.Tests/
+    └── Tlearn.API.IntegrationTests/
 
 
 
 
 
 
-LearnFlash.API/
+Tlearn.API/
 ├── Controllers/
 │   ├── AuthController.cs
 │   ├── SubjectsController.cs
@@ -45,7 +45,7 @@ LearnFlash.API/
 ├── appsettings.Development.json
 └── LearnFlash.API.csproj
 
-LearnFlash.Application/
+Tlearn.Application/
 ├── Common/
 │   ├── Interfaces/
 │   ├── Behaviors/                    # Pipeline Behaviors (MediatR)
@@ -80,7 +80,7 @@ LearnFlash.Application/
 
 
 
-LearnFlash.Domain/
+Tlearn.Domain/
 ├── Entities/
 │   ├── User.cs
 │   ├── Subject.cs
@@ -111,7 +111,7 @@ LearnFlash.Domain/
 └── LearnFlash.Domain.csproj
 
 
-LearnFlash.Infrastructure/
+Tlearn.Infrastructure/
 ├── Data/
 │   ├── LearnFlashDbContext.cs
 │   ├── Configurations/               # Entity Configurations
@@ -144,12 +144,12 @@ LearnFlash.Infrastructure/
 └── LearnFlash.Infrastructure.csproj
 
 
-LearnFlash.Common/
+Tlearn.Common/
 ├── Result.cs                         # Result Pattern
 ├── PaginatedResult.cs
 ├── Constants/
 ├── Helpers/
-└── LearnFlash.Common.csproj
+└── Tlearn.Common.csproj
 
 Add migration:
 dotnet ef migrations add todolist --project TLearn.Infrastructure --startup-project TLearn.API --output-dir TLearn.Infrastructure/Data/Migrations

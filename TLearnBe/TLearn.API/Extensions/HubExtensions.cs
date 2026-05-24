@@ -14,7 +14,7 @@ public static class HubExtensions
     public static WebApplication MapSignalRHub(
         this WebApplication app)
     {
-        app.MapHub<TodoHub>("/hubs/todo");
+        
         app.MapHub<NotificationHub>("/hubs/notifications");
         return app;
     }
