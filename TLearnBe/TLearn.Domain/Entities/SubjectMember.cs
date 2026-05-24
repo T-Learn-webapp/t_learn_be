@@ -12,6 +12,16 @@ public class SubjectMember
     public Guid? InvitedBy { get; set; }
     public virtual User? Inviter { get; set; }
     public DateTime? LastViewedAt { get; set; }
+    
+    // Soft delete
+
+    public bool IsDeleted { get; set; } = false;
+
+    public DateTime? DeletedAt { get; set; }
+
+    public Guid? DeletedByUserId { get; set; }
+
+    public virtual User? DeletedByUser { get; set; }
 }
 
 public enum SubjectPermission

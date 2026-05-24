@@ -5,9 +5,7 @@ public class Subject
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string? Color { get; set; }
-    public string? Icon { get; set; }
-    public bool IsPublic { get; set; } = true;
+    
 
     public Guid UserId { get; set; }
     public User User { get; set; }
@@ -28,11 +26,11 @@ public class Subject
     
     
     // Helper methods
+   
     public bool CanUserView(Guid userId)
     {
-        return IsPublic || UserId == userId || Members.Any(m => m.UserId == userId);
+        return  UserId == userId || Members.Any(m => m.UserId == userId);
     }
-    
     public bool CanUserComment(Guid userId)
     {
         if (UserId == userId) return true;

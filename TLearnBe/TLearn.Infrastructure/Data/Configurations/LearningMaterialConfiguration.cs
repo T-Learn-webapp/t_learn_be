@@ -4,7 +4,7 @@ using TLearn.Domain.Entities;
 
 namespace TLearn.Infrastructure.Data.Configurations;
 
-public class LearningMaterialConfiguration
+public class LearningMaterialConfiguration : IEntityTypeConfiguration<LearningMaterial>
 {
     public void Configure(EntityTypeBuilder<LearningMaterial> builder)
     {

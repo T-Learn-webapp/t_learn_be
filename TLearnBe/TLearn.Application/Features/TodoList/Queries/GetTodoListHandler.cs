@@ -29,27 +29,44 @@ public class GetTodoListHandler
     {
         var currentUserId = _currentUser.UserId;
 
+        if (!currentUserId.HasValue)
+        {
+            return Result<PagedResult<TodoListDto>>
+                .Failure("Chưa đăng nhập");
+        }
+
         var query = _context.TodoItems
             .AsNoTracking()
             .Include(x => x.LearningMaterial)
-                .ThenInclude(x => x.Subject)
+            .ThenInclude(x => x.Subject)
             .Include(x => x.Assignments)
+            .Where(x => !x.IsDeleted)
             .AsQueryable();
 
         // ===== Filter Subject =====
 
-       
-            query = query.Where(x =>
-                x.LearningMaterial.SubjectId == request.Params.SubjectId);
-        // ===== Filter Material =====
-            query = query.Where(x =>
-                x.LearningMaterialId == request.Params.LearningMaterialId);
-        // ===== Filter Mine =====
-
-        if (request.Params.Filter == TodoFilterType.Mine)
+        if (request?.Params.SubjectId != null)
         {
             query = query.Where(x =>
-                x.Assignments.Any(a => a.UserId == currentUserId));
+                x.LearningMaterial.SubjectId == request.Params.SubjectId);
+        }
+
+        // ===== Filter Material =====
+
+        if (request?.Params.LearningMaterialId != null)
+        {
+            query = query.Where(x =>
+                x.LearningMaterialId == request.Params.LearningMaterialId);
+        }
+
+        // ===== Filter Mine =====
+
+        if (request?.Params.Filter == TodoFilterType.Mine)
+        {
+            query = query.Where(x =>
+                x.Assignments.Any(a =>
+                    a.UserId == currentUserId.Value &&
+                    !a.IsDeleted));
         }
 
         // ===== Filter Status =====
@@ -58,7 +75,8 @@ public class GetTodoListHandler
         {
             query = query.Where(x =>
                 x.Assignments.Any(a =>
-                    a.Status == request.Params.Status));
+                    a.Status == request.Params.Status.Value &&
+                    !a.IsDeleted));
         }
 
         // ===== Search =====
@@ -90,15 +108,10 @@ public class GetTodoListHandler
                 : query.OrderBy(x => x.CreatedAt)
         };
 
-        // ===== Total Count =====
-
         var totalCount = await query.CountAsync(ct);
 
-        // ===== Pagination =====
-
         var items = await query
-            .Skip((request.Params.PageNumber - 1)
-                  * request.Params.PageSize)
+            .Skip((request.Params.PageNumber - 1) * request.Params.PageSize)
             .Take(request.Params.PageSize)
             .Select(x => new TodoListDto
             {
@@ -106,20 +119,27 @@ public class GetTodoListHandler
                 Title = x.Title,
                 Description = x.Description,
                 DueDate = x.DueDate,
+
                 LearningMaterialId = x.LearningMaterialId,
                 LearningMaterialTitle = x.LearningMaterial.Title,
+
                 SubjectId = x.LearningMaterial.Subject.Id,
                 SubjectName = x.LearningMaterial.Subject.Name,
+
                 CreatedByUserId = x.CreatedByUserId,
                 CreatedAt = x.CreatedAt,
 
-                // status của current user
+                // Status của current user, bỏ qua assignment đã bị remove
                 Status = x.Assignments
-                    .Where(a => a.UserId == currentUserId)
+                    .Where(a =>
+                        a.UserId == currentUserId.Value &&
+                        !a.IsDeleted)
                     .Select(a => a.Status)
                     .FirstOrDefault(),
 
+                // Chỉ lấy người được assign còn hợp lệ
                 AssignedUsers = x.Assignments
+                    .Where(a => !a.IsDeleted)
                     .Select(a => new TodoAssignedUserDto
                     {
                         UserId = a.UserId,
@@ -136,7 +156,5 @@ public class GetTodoListHandler
             request.Params.PageSize);
 
         return Result<PagedResult<TodoListDto>>.Success(result);
-                
-            
     }
 }

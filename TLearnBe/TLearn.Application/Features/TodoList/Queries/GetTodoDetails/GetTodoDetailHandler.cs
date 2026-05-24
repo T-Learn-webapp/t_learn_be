@@ -27,9 +27,14 @@ public class GetTodoDetailHandler
     {
         var currentUserId = _currentUser.UserId;
 
+        if (!currentUserId.HasValue)
+        {
+            return Result<TodoDetailDto>.Failure("Chưa đăng nhập");
+        }
+
         var todo = await _context.TodoItems
             .AsNoTracking()
-            .Where(x => x.Id == request.TodoItemId)
+            .Where(x => x.Id == request.TodoItemId && !x.IsDeleted)
             .Select(x => new TodoDetailDto
             {
                 Id = x.Id,
@@ -50,13 +55,15 @@ public class GetTodoDetailHandler
                 UpdatedAt = x.UpdatedAt,
 
                 // Status riêng của current user
-                // Status = x.Assignments
-                //     .Where(a => a.UserId == currentUserId)
-                //     .Select(a => a.Status)
-                //     .FirstOrDefault(),
-                Status = x.Status,
+                Status = x.Assignments
+                    .Where(a =>
+                        a.UserId == currentUserId.Value &&
+                        !a.IsDeleted)
+                    .Select(a => a.Status)
+                    .FirstOrDefault(),
 
                 AssignedUsers = x.Assignments
+                    .Where(a => !a.IsDeleted)
                     .Select(a => new TodoAssignedUserDetailDto
                     {
                         UserId = a.UserId,
@@ -71,7 +78,7 @@ public class GetTodoDetailHandler
 
         if (todo == null)
         {
-            return Result<TodoDetailDto>.Failure("Todo item not found");
+            return Result<TodoDetailDto>.Failure("Todo không tồn tại");
         }
 
         return Result<TodoDetailDto>.Success(todo);

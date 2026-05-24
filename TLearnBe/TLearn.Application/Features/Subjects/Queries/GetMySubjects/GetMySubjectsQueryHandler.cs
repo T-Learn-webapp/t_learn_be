@@ -26,10 +26,7 @@ public class GetMySubjectsQueryHandler : IRequestHandler<GetMySubjectsQuery, Res
         {
             var query = _context.Subjects.Where(s => s.UserId == request.UserId && s.IsDeleted == false);
 
-            if (request.OnlyPublic.HasValue && request.OnlyPublic.Value)
-            {
-                query = query.Where(s => s.IsPublic);
-            }
+           
 
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {
@@ -50,9 +47,7 @@ public class GetMySubjectsQueryHandler : IRequestHandler<GetMySubjectsQuery, Res
                     Id = s.Id,
                     Name = s.Name,
                     Description = s.Description,
-                    Color = s.Color,
-                    Icon = s.Icon,
-                    IsPublic = s.IsPublic,
+                   
                     OwnerId = s.UserId,
                     MaterialCount = s.Materials.Count,
                     CreatedAt = s.CreatedAt

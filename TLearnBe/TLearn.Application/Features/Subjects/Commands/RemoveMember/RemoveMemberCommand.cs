@@ -7,5 +7,5 @@ public class RemoveMemberCommand : IRequest<Result<bool>>
 {
     public Guid SubjectId { get; set; }
     public Guid MemberId { get; set; }
-    public Guid CurrentUserId { get; set; }
+    
 }

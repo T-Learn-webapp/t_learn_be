@@ -29,10 +29,6 @@ public class GetSubjectMembersQueryHandler : IRequestHandler<GetSubjectMembersQu
             if (subject == null)
                 return Result<PagedResult<SubjectMemberDto>>.Failure($"Subject with id '{request.SubjectId}' was not found.");
 
-            // Check permission: only members can view member list
-            if (subject.UserId != request.CurrentUserId && !subject.CanUserView(request.CurrentUserId))
-                return Result<PagedResult<SubjectMemberDto>>.Failure("You don't have permission to view members of this subject.");
-
             var query = _context.SubjectMembers
                 .Include(m => m.User)
                 .Where(m => m.SubjectId == request.SubjectId);

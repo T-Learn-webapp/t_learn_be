@@ -35,7 +35,8 @@ public class SubjectsController : ControllerBase
         [FromQuery] int pageSize = 10,
         [FromQuery] string? searchTerm = null,
         [FromQuery] string? sortBy = null,
-        [FromQuery] bool isDescending = true)
+        [FromQuery] bool isDescending = true,
+        [FromQuery] SubjectFilterType  filter = SubjectFilterType.All)
     {
         var userId = GetUserId();
         var query = new GetSubjectsQuery
@@ -45,7 +46,8 @@ public class SubjectsController : ControllerBase
             PageNumber = pageNumber,
             PageSize = pageSize,
             SortBy = sortBy,
-            IsDescending = isDescending
+            IsDescending = isDescending,
+            Filter = filter
         };
         
         var result = await _mediator.Send(query);
@@ -211,20 +213,18 @@ public class SubjectsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(new { message = "Permission updated successfully" });
+        return Ok(new { message = "Cập nhật thành " });
     }
 
     // DELETE: api/subjects/{subjectId}/members/{memberId}
     [HttpDelete("{subjectId}/members/{memberId}")]
     public async Task<IActionResult> RemoveMember(Guid subjectId, Guid memberId)
     {
-        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
-        
         var command = new RemoveMemberCommand
         {
             SubjectId = subjectId,
-            MemberId = memberId,
-            CurrentUserId = userId
+            MemberId = memberId
+            
         };
         
         var result = await _mediator.Send(command);
@@ -232,7 +232,7 @@ public class SubjectsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(new { message = "Member removed successfully" });
+        return Ok(result);
     }
     
 

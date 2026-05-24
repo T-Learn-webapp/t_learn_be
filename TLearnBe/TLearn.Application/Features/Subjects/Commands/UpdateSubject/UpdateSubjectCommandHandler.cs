@@ -44,9 +44,7 @@ public class UpdateSubjectCommandHandler : IRequestHandler<UpdateSubjectCommand,
 
             subject.Name = request.Name.Trim();
             subject.Description = request.Description;
-            subject.Color = request.Color;
-            subject.Icon = request.Icon;
-            subject.IsPublic = request.IsPublic;
+            
 
             await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
             
@@ -64,9 +62,7 @@ public class UpdateSubjectCommandHandler : IRequestHandler<UpdateSubjectCommand,
                     Id = subject.Id,
                     Name = subject.Name,
                     Description = subject.Description,
-                    Color = subject.Color,
-                    Icon = subject.Icon,
-                    IsPublic = subject.IsPublic,
+                    
                     MaterialCount = materialCount,
                     CreatedAt = subject.CreatedAt
                 });

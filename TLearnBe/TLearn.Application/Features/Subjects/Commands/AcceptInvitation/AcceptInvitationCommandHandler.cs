@@ -39,17 +39,18 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
         {
             var invitation = await _context.SubjectInvitations
                 .Include(i => i.Subject)
+                .ThenInclude(s => s.Members)
                 .FirstOrDefaultAsync(i => i.InviteToken == request.Token && i.Status == InvitationStatus.Pending,
                     cancellationToken);
 
             if (invitation == null)
-                return Result<AcceptInvitationResult>.Failure("Invalid or already used invitation.");
+                return Result<AcceptInvitationResult>.Failure("Lời mời không hợp lệ hoặc đã được sử dụng.");
 
             if (invitation.ExpiresAt < DateTime.UtcNow)
             {
                 invitation.Status = InvitationStatus.Expired;
                 await _context.SaveChangesAsync(cancellationToken);
-                return Result<AcceptInvitationResult>.Failure("This invitation has expired.");
+                return Result<AcceptInvitationResult>.Failure("Lời mời này đã hết hạn.");
             }
 
             // Check if user is logged in
@@ -61,11 +62,11 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
                 // User is logged in
                 user = await _userManager.FindByIdAsync(request.UserId.Value.ToString());
                 if (user == null)
-                    return Result<AcceptInvitationResult>.Failure("User not found.");
+                    return Result<AcceptInvitationResult>.Failure("Không tìm thấy người dùng.");
 
                 if (user.Email?.ToLower() != invitation.Email.ToLower())
                     return Result<AcceptInvitationResult>.Failure(
-                        "This invitation was sent to a different email address.");
+                        "Lời mời này được gửi tới một địa chỉ email khác.");
             }
             else if (!string.IsNullOrEmpty(request.RegisterData?.Password))
             {
@@ -88,30 +89,67 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
             }
             else
             {
-                return Result<AcceptInvitationResult>.Failure("Please login or register to accept this invitation.");
+                return Result<AcceptInvitationResult>.Failure("Vui lòng đăng nhập hoặc đăng ký để chấp nhận lời mời.");
             }
 
-            // Check if already a member
+            // Kiểm tra thành viên hiện có, bao gồm cả thành viên đã bị xoá mềm
             var existingMember = await _context.SubjectMembers
-                .AnyAsync(m => m.SubjectId == invitation.SubjectId && m.UserId == user.Id, cancellationToken);
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    m => m.SubjectId == invitation.SubjectId &&
+                         m.UserId == user.Id,
+                    cancellationToken);
 
-            if (existingMember)
-                return Result<AcceptInvitationResult>.Failure("You are already a member of this subject.");
-
+            if (existingMember != null && !existingMember.IsDeleted)
+                return Result<AcceptInvitationResult>.Failure("Bạn đã là thành viên của môn học này.");
 
             try
             {
-                // Add member
-                var member = new SubjectMember
-                {
-                    SubjectId = invitation.SubjectId,
-                    UserId = user.Id,
-                    Permission = invitation.Permission,
-                    InvitedBy = invitation.InvitedBy,
-                    JoinedAt = DateTime.UtcNow
-                };
+                SubjectMember member;
 
-                _context.SubjectMembers.Add(member);
+                if (existingMember != null && existingMember.IsDeleted)
+                {
+                    // Khôi phục thành viên từng bị xoá khỏi subject
+                    existingMember.IsDeleted = false;
+                    existingMember.DeletedAt = null;
+                    existingMember.DeletedByUserId = null;
+                    existingMember.Permission = invitation.Permission;
+                    existingMember.InvitedBy = invitation.InvitedBy;
+                    existingMember.JoinedAt = DateTime.UtcNow;
+
+                    member = existingMember;
+
+                    var deletedAssignments = await _context.TodoAssignments
+                        .Where(a =>
+                            a.UserId == user.Id &&
+                            a.TodoItem.LearningMaterial.SubjectId == invitation.SubjectId &&
+                            a.IsDeleted)
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var assignment in deletedAssignments)
+
+                    {
+                        assignment.IsDeleted = false;
+
+                        assignment.DeletedAt = null;
+
+                        assignment.DeletedByUserId = null;
+                    }
+                }
+                else
+                {
+                    // Thêm thành viên mới
+                    member = new SubjectMember
+                    {
+                        SubjectId = invitation.SubjectId,
+                        UserId = user.Id,
+                        Permission = invitation.Permission,
+                        InvitedBy = invitation.InvitedBy,
+                        JoinedAt = DateTime.UtcNow
+                    };
+
+                    _context.SubjectMembers.Add(member);
+                }
 
                 // Update invitation
                 invitation.IsUsed = true;
@@ -182,7 +220,7 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
             {
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Database error while accepting invitation");
-                return Result<AcceptInvitationResult>.Failure("Failed to accept invitation. Please try again.");
+                return Result<AcceptInvitationResult>.Failure("Không thể chấp nhận lời mời. Vui lòng thử lại.");
             }
         }
         catch (Exception ex)
@@ -190,7 +228,7 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
             await transaction.RollbackAsync(cancellationToken);
 
             _logger.LogError(ex, "Unexpected error while accepting invitation");
-            return Result<AcceptInvitationResult>.Failure("An unexpected error occurred.");
+            return Result<AcceptInvitationResult>.Failure("Đã xảy ra lỗi không xác định.");
         }
     }
 }

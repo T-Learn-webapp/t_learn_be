@@ -34,12 +34,9 @@ public class GetMaterialByIdQueryHandler : IRequestHandler<GetMaterialByIdQuery,
             // 1. The subject is public, OR
             // 2. User owns the subject, OR
             // 3. User owns the material
-            var canView = material.Subject.IsPublic || 
-                          material.Subject.UserId == request.UserId || 
-                          material.UserId == request.UserId;
-
-            if (!canView)
+            if(material.Subject.CanUserView(request.UserId.Value))
                 return Result<LearningMaterialDto>.Failure("You don't have permission to view this material.");
+            
 
             return Result<LearningMaterialDto>.Success(new LearningMaterialDto
             {

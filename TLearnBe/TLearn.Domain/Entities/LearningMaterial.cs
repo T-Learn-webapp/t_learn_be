@@ -22,6 +22,7 @@ public class LearningMaterial
     public ICollection<Flashcard> Flashcards { get; set; } 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    public ICollection<LearningMaterialVersion> Versions { get; set; } = new List<LearningMaterialVersion>();
     
     // Soft delete
 
@@ -30,4 +31,31 @@ public class LearningMaterial
     public DateTime? DeletedAt { get; set; }
 
     public Guid? DeletedByUserId { get; set; }
+}
+
+public class LearningMaterialVersion
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid LearningMaterialId { get; set; }
+
+    public LearningMaterial LearningMaterial { get; set; } = null!;
+
+    public long VersionNumber { get; set; }
+
+    public string Title { get; set; } = string.Empty;
+
+    public string? Content { get; set; }
+
+    public string? Summary { get; set; }
+
+    public string? YjsSnapshot { get; set; }
+
+    public Guid EditedByUserId { get; set; }
+
+    public User EditedByUser { get; set; } = null!;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public string? ChangeNote { get; set; }
 }

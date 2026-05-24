@@ -39,9 +39,7 @@ public class CreateSubjectCommandHandler : IRequestHandler<CreateSubjectCommand,
             {
                 Name = request.Name.Trim(),
                 Description = request.Description,
-                Color = request.Color,
-                Icon = request.Icon,
-                IsPublic = request.IsPublic,
+                
                 UserId = request.UserId,
                 CreatedAt = DateTime.UtcNow
             };
@@ -59,9 +57,7 @@ public class CreateSubjectCommandHandler : IRequestHandler<CreateSubjectCommand,
                     Id = subject.Id,
                     Name = subject.Name,
                     Description = subject.Description,
-                    Color = subject.Color,
-                    Icon = subject.Icon,
-                    IsPublic = subject.IsPublic,
+                   
                     MaterialCount = 0,
                     CreatedAt = subject.CreatedAt
                 });

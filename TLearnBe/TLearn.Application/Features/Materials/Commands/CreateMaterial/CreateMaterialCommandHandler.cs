@@ -33,7 +33,7 @@ public class CreateMaterialCommandHandler : IRequestHandler<CreateMaterialComman
             if (subject == null)
                 return Result<LearningMaterialDto>.Failure($"Subject with id '{request.SubjectId}' was not found.");
 
-            if (!subject.IsPublic && subject.UserId != request.UserId)
+            if (subject.UserId != request.UserId)
                 return Result<LearningMaterialDto>.Failure("You don't have permission to add material to this subject.");
 
             var material = new LearningMaterial

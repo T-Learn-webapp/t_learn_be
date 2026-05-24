@@ -27,6 +27,7 @@ public class TLearnDbContext : IdentityDbContext<User, Role, Guid>
     public DbSet<TodoAssignment> TodoAssignments{ get; set; }
     public DbSet<TodoItem> TodoItems  { get; set; }
 
+    public DbSet<LearningMaterialVersion> LearningMaterialVersions { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

@@ -12,11 +12,6 @@ Tlearn.sln
     ├── Tlearn.Infrastructure.Tests/
     └── Tlearn.API.IntegrationTests/
 
-
-
-
-
-
 Tlearn.API/
 ├── Controllers/
 │   ├── AuthController.cs
@@ -78,8 +73,6 @@ Tlearn.Application/
 ├── Services/                         # Application Services
 └── LearnFlash.Application.csproj
 
-
-
 Tlearn.Domain/
 ├── Entities/
 │   ├── User.cs
@@ -109,7 +102,6 @@ Tlearn.Domain/
 ├── Specifications/                   # Specification Pattern (optional)
 ├── Rules/                            # Business Rules
 └── LearnFlash.Domain.csproj
-
 
 Tlearn.Infrastructure/
 ├── Data/
@@ -143,7 +135,6 @@ Tlearn.Infrastructure/
 ├── DependencyInjection.cs            # Extension method để register services
 └── LearnFlash.Infrastructure.csproj
 
-
 Tlearn.Common/
 ├── Result.cs                         # Result Pattern
 ├── PaginatedResult.cs
@@ -151,8 +142,8 @@ Tlearn.Common/
 ├── Helpers/
 └── Tlearn.Common.csproj
 
-Add migration:
-dotnet ef migrations add SoftDelete --project TLearn.Infrastructure --startup-project TLearn.API --output-dir TLearn.Infrastructure/Data/Migrations
+Add migration:  
+dotnet ef migrations add MaterialVersion --project TLearn.Infrastructure --startup-project TLearn.API --output-dir TLearn.Infrastructure/Data/Migrations
 
 update Migration :
 dotnet ef database update --project TLearn.Infrastructure --startup-project TLearn.API

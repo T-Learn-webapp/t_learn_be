@@ -10,7 +10,7 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
     {
         builder.HasQueryFilter(x => !x.IsDeleted);
         builder.Property(s => s.Name).IsRequired().HasMaxLength(200);
-        builder.Property(s => s.Color).HasMaxLength(7);
+        
         
         builder.HasOne(s => s.User).
             WithMany(u => u.Subjects)

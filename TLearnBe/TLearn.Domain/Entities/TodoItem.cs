@@ -59,6 +59,16 @@ public class TodoAssignment
     public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? CompletedAt { get; set; }
+    
+    // Soft remove
+
+    public bool IsDeleted { get; set; } = false;
+
+    public DateTime? DeletedAt { get; set; }
+
+    public Guid? DeletedByUserId { get; set; }
+
+    
 }
 
 public enum TodoStatus

@@ -13,6 +13,7 @@
 
     <ItemGroup>
       <Folder Include="Features\Materials\Interfaces\" />
+      <Folder Include="Features\MaterialVersions\Commands\" />
       <Folder Include="Features\Subjects\Interfaces\" />
     </ItemGroup>
 

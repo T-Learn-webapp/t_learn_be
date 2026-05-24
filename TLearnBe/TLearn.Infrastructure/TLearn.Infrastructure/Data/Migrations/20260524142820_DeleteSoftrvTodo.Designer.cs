@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TLearn.Infrastructure.Data.Configurations;
 
@@ -11,9 +12,11 @@ using TLearn.Infrastructure.Data.Configurations;
 namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(TLearnDbContext))]
-    partial class TLearnDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260524142820_DeleteSoftrvTodo")]
+    partial class DeleteSoftrvTodo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -210,8 +213,7 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -232,50 +234,6 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("LearningMaterials");
-                });
-
-            modelBuilder.Entity("TLearn.Domain.Entities.LearningMaterialVersion", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ChangeNote")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Content")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("EditedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("LearningMaterialId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Summary")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("VersionNumber")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("YjsSnapshot")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EditedByUserId");
-
-                    b.HasIndex("LearningMaterialId", "VersionNumber")
-                        .IsUnique();
-
-                    b.ToTable("LearningMaterialVersions");
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.Notification", b =>
@@ -1181,25 +1139,6 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("TLearn.Domain.Entities.LearningMaterialVersion", b =>
-                {
-                    b.HasOne("TLearn.Domain.Entities.User", "EditedByUser")
-                        .WithMany()
-                        .HasForeignKey("EditedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("TLearn.Domain.Entities.LearningMaterial", "LearningMaterial")
-                        .WithMany("Versions")
-                        .HasForeignKey("LearningMaterialId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("EditedByUser");
-
-                    b.Navigation("LearningMaterial");
-                });
-
             modelBuilder.Entity("TLearn.Domain.Entities.Notification", b =>
                 {
                     b.HasOne("TLearn.Domain.Entities.User", "User")
@@ -1495,8 +1434,6 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.Navigation("Flashcards");
 
                     b.Navigation("TodoItems");
-
-                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.Question", b =>

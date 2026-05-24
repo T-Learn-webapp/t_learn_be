@@ -8,6 +8,7 @@ public class SubjectMemberConfiguration : IEntityTypeConfiguration<SubjectMember
 {
     public void Configure(EntityTypeBuilder<SubjectMember> builder)
     {
+        builder.HasQueryFilter(x => !x.IsDeleted);
         builder.HasKey(x => x.Id);
 
         builder.HasIndex(x => new { x.SubjectId, x.UserId })

@@ -9,6 +9,7 @@ public class TodoAssignmentConfiguration : IEntityTypeConfiguration<TodoAssignme
 {
     public void Configure(EntityTypeBuilder<TodoAssignment> builder)
     {
+        // builder.HasQueryFilter(x => !x.User.IsDeleted);
         builder.HasKey(x => new { x.TodoItemId, x.UserId });
 
        

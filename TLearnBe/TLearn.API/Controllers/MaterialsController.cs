@@ -9,6 +9,8 @@ using TLearn.Application.Features.Materials.Commands.UpdateMaterial;
 using TLearn.Application.Features.Materials.Commands.UpdateTitle;
 using TLearn.Application.Features.Materials.DTOs;
 using TLearn.Application.Features.Materials.Queries.GetMaterialById;
+using TLearn.Application.Features.MaterialVersions.Queries.GetDetaisVersion;
+using TLearn.Application.Features.MaterialVersions.Queries.GetListVersion;
 using TLearn.Common;
 using TLearn.Domain.Entities;
 using TLearn.Infrastructure.Data.Configurations;
@@ -22,13 +24,13 @@ public class MaterialsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly TLearnDbContext _context;
-    public MaterialsController(IMediator mediator,TLearnDbContext context)
+
+    public MaterialsController(IMediator mediator, TLearnDbContext context)
     {
         _mediator = mediator;
         _context = context;
     }
 
-    
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMaterial(Guid id)
@@ -36,10 +38,10 @@ public class MaterialsController : ControllerBase
         var userId = GetUserId();
         var query = new GetMaterialByIdQuery { Id = id, UserId = userId };
         var result = await _mediator.Send(query);
-        
+
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
-        
+
         return Ok(result);
     }
 
@@ -48,10 +50,10 @@ public class MaterialsController : ControllerBase
     {
         command.UserId = GetUserId();
         var result = await _mediator.Send(command);
-        
+
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
-        
+
         return Ok(result.Data);
     }
 
@@ -61,13 +63,13 @@ public class MaterialsController : ControllerBase
         command.Id = id;
         command.UserId = GetUserId();
         var result = await _mediator.Send(command);
-        
+
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
-        
+
         return Ok(result);
     }
-    
+
     [HttpPatch("{id:guid}/info")]
     public async Task<IActionResult> UpdateInfo(
         Guid id,
@@ -118,7 +120,7 @@ public class MaterialsController : ControllerBase
 
         return Ok(result);
     }
-    
+
     [HttpGet("{id}/collaboration-info")]
     public async Task<IActionResult> GetCollaborationInfo(Guid id)
     {
@@ -126,14 +128,14 @@ public class MaterialsController : ControllerBase
         var material = await _context.LearningMaterials
             .Include(m => m.Subject)
             .FirstOrDefaultAsync(m => m.Id == id);
-    
+
         if (material == null)
             return NotFound();
-    
+
         // Check permission
-        if (!material.Subject.CanUserView(userId))
-            return Forbid();
-    
+        // if (!material.Subject.CanUserView(userId))
+        //     return Forbid();
+
         // Generate SignalR token
         var hubToken = GenerateHubToken(userId.ToString(), material.Id.ToString());
         var result = Result<object>.Success(new
@@ -144,7 +146,7 @@ public class MaterialsController : ControllerBase
             hubUrl = "/collaborationHub",
             hubToken = hubToken,
             version = material.Version,
-            snapshot = material.YjsSnapshot,  // Initial snapshot
+            snapshot = material.YjsSnapshot, // Initial snapshot
             isCollaborative = material.IsCollaborative
         });
         // return Ok(new
@@ -168,17 +170,80 @@ public class MaterialsController : ControllerBase
         var material = await _context.LearningMaterials
             .Include(m => m.Subject)
             .FirstOrDefaultAsync(m => m.Id == id);
-    
+
         if (material == null)
             return NotFound();
-    
+
         if (material.UserId != userId && !material.Subject.CanUserManage(userId))
             return Forbid();
-    
+
         material.IsCollaborative = isCollaborative;
         await _context.SaveChangesAsync();
-    
+
         return Ok(new { isCollaborative = material.IsCollaborative });
+    }
+
+
+    [HttpGet("{id:guid}/versions")]
+    public async Task<IActionResult> GetVersions(
+        Guid id,
+        [FromQuery] GetMaterialVersionsQuery query,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Chưa đăng nhập"
+            });
+        }
+
+        query.MaterialId = id;
+        query.UserId = Guid.Parse(userId);
+
+        var result = await _mediator.Send(query, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/versions/{versionId:guid}")]
+    public async Task<IActionResult> GetVersionDetail(
+        Guid id,
+        Guid versionId,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Chưa đăng nhập"
+            });
+        }
+
+        var query = new GetMaterialVersionDetailQuery
+        {
+            MaterialId = id,
+            VersionId = versionId,
+            UserId = Guid.Parse(userId)
+        };
+
+        var result = await _mediator.Send(query, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
     }
 
     private string GenerateHubToken(string userId, string materialId)
@@ -194,7 +259,7 @@ public class MaterialsController : ControllerBase
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim))
             throw new UnauthorizedAccessException("User not authenticated");
-        
+
         return Guid.Parse(userIdClaim);
     }
 }

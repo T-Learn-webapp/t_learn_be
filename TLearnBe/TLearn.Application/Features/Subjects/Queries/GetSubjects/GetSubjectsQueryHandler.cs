@@ -9,48 +9,72 @@ using TLearn.Infrastructure.Data.Configurations;
 
 namespace TLearn.Application.Features.Subjects.Queries.GetSubjects;
 
-public class GetSubjectsQueryHandler : IRequestHandler<GetSubjectsQuery, Result<PagedResult<SubjectDto>>>
+public class GetSubjectsQueryHandler 
+    : IRequestHandler<GetSubjectsQuery, Result<PagedResult<SubjectDto>>>
 {
     private readonly TLearnDbContext _context;
     private readonly ILogger<GetSubjectsQueryHandler> _logger;
 
-    public GetSubjectsQueryHandler(TLearnDbContext context, ILogger<GetSubjectsQueryHandler> logger)
+    public GetSubjectsQueryHandler(
+        TLearnDbContext context,
+        ILogger<GetSubjectsQueryHandler> logger)
     {
         _context = context;
         _logger = logger;
     }
 
-    public async Task<Result<PagedResult<SubjectDto>>> Handle(GetSubjectsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PagedResult<SubjectDto>>> Handle(
+        GetSubjectsQuery request,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var query = _context.Subjects.AsQueryable().Where(s=>s.IsDeleted == false);
-
-            // Filter by user or public
-            if (request.UserId.HasValue)
+            if (!request.UserId.HasValue)
             {
-                query = query.Where(s => s.UserId == request.UserId || s.IsPublic);
-            }
-            else if (request.IsPublic.HasValue)
-            {
-                query = query.Where(s => s.IsPublic == request.IsPublic.Value);
+                return Result<PagedResult<SubjectDto>>
+                    .Failure("Chưa đăng nhập.");
             }
 
-            // Search filter
+            var userId = request.UserId.Value;
+
+            var query = _context.Subjects
+                .AsNoTracking()
+                .Include(s => s.Members)
+                .Where(s => !s.IsDeleted)
+                .Where(s =>
+                    s.UserId == userId ||
+                    s.Members.Any(m => m.UserId == userId))
+                .AsQueryable();
+
+            query = request.Filter switch
+            {
+                SubjectFilterType.Owned => query.Where(s =>
+                    s.UserId == userId),
+
+                SubjectFilterType.Joined => query.Where(s =>
+                    s.UserId != userId &&
+                    s.Members.Any(m => m.UserId == userId)),
+
+                _ => query
+            };
+
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {
-                var searchTerm = request.SearchTerm.ToLower();
-                query = query.Where(s => s.Name.ToLower().Contains(searchTerm) || 
-                                         (s.Description != null && s.Description.ToLower().Contains(searchTerm)));
+                var searchTerm = request.SearchTerm.Trim().ToLower();
+
+                query = query.Where(s =>
+                    s.Name.ToLower().Contains(searchTerm) ||
+                    (s.Description != null &&
+                     s.Description.ToLower().Contains(searchTerm)));
             }
 
-            // Get total count
             var totalCount = await query.CountAsync(cancellationToken);
 
-            // Sorting
-            query = ApplySorting(query, request.SortBy, request.IsDescending);
+            query = ApplySorting(
+                query,
+                request.SortBy,
+                request.IsDescending);
 
-            // Pagination
             var subjects = await query
                 .Skip((request.PageNumber - 1) * request.PageSize)
                 .Take(request.PageSize)
@@ -59,38 +83,72 @@ public class GetSubjectsQueryHandler : IRequestHandler<GetSubjectsQuery, Result<
                     Id = s.Id,
                     Name = s.Name,
                     Description = s.Description,
-                    Color = s.Color,
-                    Icon = s.Icon,
-                    IsPublic = s.IsPublic,
                     OwnerId = s.UserId,
-                    MaterialCount = s.Materials.Count,
-                    CreatedAt = s.CreatedAt
+                    MaterialCount = s.Materials.Count(m => !m.IsDeleted),
+                    CreatedAt = s.CreatedAt,
+    
+                    IsOwner = s.UserId == userId,
+                    OwnerName = s.User.FullName,
+                    OwnerEmail =  s.User.Email ?? "none",
+                    IsMember = s.Members.Any(m => m.UserId == userId),
+
+                    MyPermission = s.UserId == userId
+                        ? SubjectPermission.Manage
+                        : s.Members
+                            .Where(m => m.UserId == userId)
+                            .Select(m => (SubjectPermission?)m.Permission)
+                            .FirstOrDefault(),
+
+                    Role = s.UserId == userId
+                        ? "Owner"
+                        : "Member"
                 })
                 .ToListAsync(cancellationToken);
 
-            var result = new PagedResult<SubjectDto>(subjects, totalCount, request.PageNumber, request.PageSize);
+            var result = new PagedResult<SubjectDto>(
+                subjects,
+                totalCount,
+                request.PageNumber,
+                request.PageSize);
+
             return Result<PagedResult<SubjectDto>>.Success(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while getting subjects");
-            return Result<PagedResult<SubjectDto>>.Failure("An error occurred while retrieving subjects.");
+            _logger.LogError(ex, "Lỗi khi lấy danh sách môn học");
+
+            return Result<PagedResult<SubjectDto>>
+                .Failure("Đã xảy ra lỗi khi lấy danh sách môn học.");
         }
     }
 
-    private IQueryable<Subject> ApplySorting(IQueryable<Subject> query, string? sortBy, bool isDescending)
+    private IQueryable<Subject> ApplySorting(
+        IQueryable<Subject> query,
+        string? sortBy,
+        bool isDescending)
     {
         if (string.IsNullOrWhiteSpace(sortBy))
         {
-            return isDescending ? query.OrderByDescending(s => s.CreatedAt) : query.OrderBy(s => s.CreatedAt);
+            return isDescending
+                ? query.OrderByDescending(s => s.CreatedAt)
+                : query.OrderBy(s => s.CreatedAt);
         }
 
         var sortExpression = sortBy.ToLower();
+
         query = sortExpression switch
         {
-            "name" => isDescending ? query.OrderByDescending(s => s.Name) : query.OrderBy(s => s.Name),
-            "materialcount" => isDescending ? query.OrderByDescending(s => s.Materials.Count) : query.OrderBy(s => s.Materials.Count),
-            _ => isDescending ? query.OrderByDescending(s => s.CreatedAt) : query.OrderBy(s => s.CreatedAt)
+            "name" => isDescending
+                ? query.OrderByDescending(s => s.Name)
+                : query.OrderBy(s => s.Name),
+
+            "materialcount" => isDescending
+                ? query.OrderByDescending(s => s.Materials.Count(m => !m.IsDeleted))
+                : query.OrderBy(s => s.Materials.Count(m => !m.IsDeleted)),
+
+            _ => isDescending
+                ? query.OrderByDescending(s => s.CreatedAt)
+                : query.OrderBy(s => s.CreatedAt)
         };
 
         return query;

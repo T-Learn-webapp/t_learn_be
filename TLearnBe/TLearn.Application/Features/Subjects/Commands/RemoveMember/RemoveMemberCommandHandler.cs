@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using TLearn.Common;
 using TLearn.Domain.Exceptions;
 using TLearn.Infrastructure.Data.Configurations;
+using TLearn.Infrastructure.Services;
 
 namespace TLearn.Application.Features.Subjects.Commands.RemoveMember;
 
@@ -11,42 +12,90 @@ public class RemoveMemberCommandHandler : IRequestHandler<RemoveMemberCommand, R
 {
     private readonly TLearnDbContext _context;
     private readonly ILogger<RemoveMemberCommandHandler> _logger;
+    private readonly ICurrentUserService _currentUser;
 
-    public RemoveMemberCommandHandler(TLearnDbContext context, ILogger<RemoveMemberCommandHandler> logger)
+    public RemoveMemberCommandHandler(TLearnDbContext context, ILogger<RemoveMemberCommandHandler> logger,
+        ICurrentUserService currentUser)
     {
+        _currentUser = currentUser;
         _context = context;
         _logger = logger;
     }
 
-    public async Task<Result<bool>> Handle(RemoveMemberCommand request, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(
+        RemoveMemberCommand request,
+        CancellationToken cancellationToken)
     {
         try
         {
+            var currentUserId = _currentUser.UserId;
+
+            if (currentUserId == null)
+            {
+                return Result<bool>.Failure("Chưa đăng nhập");
+            }
+
             var subject = await _context.Subjects
-                .FirstOrDefaultAsync(s => s.Id == request.SubjectId, cancellationToken);
+                .Include(s => s.Members)
+                .FirstOrDefaultAsync(
+                    s => s.Id == request.SubjectId && !s.IsDeleted,
+                    cancellationToken);
 
             if (subject == null)
-                return Result<bool>.Failure($"Subject with id '{request.SubjectId}' was not found.");
+            {
+                return Result<bool>.Failure("Môn học không tồn tại.");
+            }
 
-            // Only owner or manager can remove members
-            if (subject.UserId != request.CurrentUserId && !subject.CanUserManage(request.CurrentUserId))
-                return Result<bool>.Failure("You don't have permission to remove members from this subject.");
+            // Chỉ chủ sở hữu hoặc người có quyền quản lý mới được xoá thành viên
+            if (subject.UserId != currentUserId.Value &&
+                !subject.CanUserManage(currentUserId.Value))
+            {
+                return Result<bool>.Failure(
+                    "Bạn không có quyền xoá thành viên khỏi môn học này.");
+            }
 
             var member = await _context.SubjectMembers
-                .FirstOrDefaultAsync(m => m.Id == request.MemberId && m.SubjectId == request.SubjectId, cancellationToken);
+                .FirstOrDefaultAsync(
+                    m => m.Id == request.MemberId &&
+                         m.SubjectId == request.SubjectId &&
+                         !m.IsDeleted,
+                    cancellationToken);
 
             if (member == null)
-                return Result<bool>.Failure("Member not found in this subject.");
+            {
+                return Result<bool>.Failure(
+                    "Không tìm thấy thành viên trong môn học này.");
+            }
 
-            // Cannot remove owner
+            // Không được xoá chủ sở hữu
             if (member.UserId == subject.UserId)
-                return Result<bool>.Failure("Cannot remove the owner from the subject.");
+            {
+                return Result<bool>.Failure(
+                    "Không thể xoá chủ sở hữu khỏi môn học.");
+            }
 
-            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                _context.SubjectMembers.Remove(member);
+                member.IsDeleted = true;
+                member.DeletedAt = DateTime.UtcNow;
+                member.DeletedByUserId = currentUserId.Value;
+
+                var todoAssignments = await _context.TodoAssignments
+                    .Where(a =>
+                        a.UserId == member.UserId &&
+                        a.TodoItem.LearningMaterial.SubjectId == request.SubjectId &&
+                        !a.IsDeleted)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var assignment in todoAssignments)
+                {
+                    assignment.IsDeleted = true;
+                    assignment.DeletedAt = DateTime.UtcNow;
+                    assignment.DeletedByUserId = currentUserId.Value;
+                }
                 await _context.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
@@ -55,14 +104,22 @@ public class RemoveMemberCommandHandler : IRequestHandler<RemoveMemberCommand, R
             catch (DbUpdateException ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                _logger.LogError(ex, "Database error while removing member");
-                throw new SqlException("Failed to remove member", ex);
+
+                _logger.LogError(
+                    ex,
+                    "Lỗi database khi xoá thành viên khỏi môn học");
+
+                throw new SqlException("Không thể xoá thành viên khỏi môn học.", ex);
             }
         }
         catch (Exception ex) when (ex is not SqlException)
         {
-            _logger.LogError(ex, "Unexpected error while removing member");
-            return Result<bool>.Failure("An unexpected error occurred while removing member.");
+            _logger.LogError(
+                ex,
+                "Lỗi không xác định khi xoá thành viên khỏi môn học");
+
+            return Result<bool>.Failure(
+                "Đã xảy ra lỗi khi xoá thành viên khỏi môn học.");
         }
     }
 }

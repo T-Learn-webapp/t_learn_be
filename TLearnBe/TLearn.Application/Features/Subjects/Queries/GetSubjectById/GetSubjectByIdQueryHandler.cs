@@ -29,18 +29,13 @@ public class GetSubjectByIdQueryHandler : IRequestHandler<GetSubjectByIdQuery, R
             if (subject == null)
                 return Result<SubjectDto>.Failure($"Subject with id '{request.Id}' was not found.");
 
-            // Check permission: user can view if it's public or they own it
-            if (!subject.IsPublic && subject.UserId != request.UserId)
-                return Result<SubjectDto>.Failure("You don't have permission to view this subject.");
+            
 
             return Result<SubjectDto>.Success(new SubjectDto
             {
                 Id = subject.Id,
                 Name = subject.Name,
                 Description = subject.Description,
-                Color = subject.Color,
-                Icon = subject.Icon,
-                IsPublic = subject.IsPublic,
                 OwnerId = subject.UserId,
                 MaterialCount = subject.Materials.Count,
                 CreatedAt = subject.CreatedAt

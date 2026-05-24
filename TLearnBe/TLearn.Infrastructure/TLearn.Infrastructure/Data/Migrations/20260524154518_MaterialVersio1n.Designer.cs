@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TLearn.Infrastructure.Data.Configurations;
 
@@ -11,9 +12,11 @@ using TLearn.Infrastructure.Data.Configurations;
 namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(TLearnDbContext))]
-    partial class TLearnDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260524154518_MaterialVersio1n")]
+    partial class MaterialVersio1n
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -210,8 +213,7 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -272,8 +274,7 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 
                     b.HasIndex("EditedByUserId");
 
-                    b.HasIndex("LearningMaterialId", "VersionNumber")
-                        .IsUnique();
+                    b.HasIndex("LearningMaterialId");
 
                     b.ToTable("LearningMaterialVersions");
                 });
@@ -1186,13 +1187,13 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.HasOne("TLearn.Domain.Entities.User", "EditedByUser")
                         .WithMany()
                         .HasForeignKey("EditedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("TLearn.Domain.Entities.LearningMaterial", "LearningMaterial")
                         .WithMany("Versions")
                         .HasForeignKey("LearningMaterialId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("EditedByUser");
