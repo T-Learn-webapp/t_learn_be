@@ -150,13 +150,14 @@ public class TodosController : ControllerBase
     // =========================
 
     [HttpDelete("{id:guid}")]
-    public async Task<ActionResult<Result<bool>>> Delete(Guid id)
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken ct)
     {
-        var command = new DeleteTodoCommand
-        {
-            TodoId = id
-        };
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(
+            new DeleteTodoCommand(id),
+            ct);
+
         if (!result.IsSuccess)
         {
             return BadRequest(result);

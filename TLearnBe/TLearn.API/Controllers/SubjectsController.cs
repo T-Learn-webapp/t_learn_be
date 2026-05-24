@@ -154,16 +154,21 @@ public class SubjectsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteSubject(Guid id)
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken ct)
     {
-        var command = new DeleteSubjectCommand { Id = id, UserId = GetUserId() };
-        var result = await _mediator.Send(command);
-        
+        var result = await _mediator.Send(
+            new DeleteSubjectCommand(id),
+            ct);
+
         if (!result.IsSuccess)
-            return BadRequest(new { message = result.Error });
-        
-        return NoContent();
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
     }
     
     [HttpGet("{id}/members")]

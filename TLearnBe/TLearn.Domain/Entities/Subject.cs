@@ -18,6 +18,15 @@ public class Subject
     public virtual ICollection<SubjectMember> Members { get; set; } = new List<SubjectMember>();
     public virtual ICollection<SubjectInvitation> Invitations { get; set; } = new List<SubjectInvitation>();
     
+    // Soft delete
+
+    public bool IsDeleted { get; set; } = false;
+
+    public DateTime? DeletedAt { get; set; }
+
+    public Guid? DeletedByUserId { get; set; }
+    
+    
     // Helper methods
     public bool CanUserView(Guid userId)
     {
@@ -56,4 +65,5 @@ public class Subject
     }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 }

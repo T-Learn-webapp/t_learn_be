@@ -4,59 +4,57 @@ using Microsoft.Extensions.Logging;
 using TLearn.Common;
 using TLearn.Domain.Exceptions;
 using TLearn.Infrastructure.Data.Configurations;
+using TLearn.Infrastructure.Services;
 
 namespace TLearn.Application.Features.Subjects.Commands.DeleteSubject;
 
-public class DeleteSubjectCommandHandler : IRequestHandler<DeleteSubjectCommand, Result<bool>>
+public class DeleteSubjectHandler
+    : IRequestHandler<DeleteSubjectCommand, Result<bool>>
 {
     private readonly TLearnDbContext _context;
-    private readonly ILogger<DeleteSubjectCommandHandler> _logger;
+    private readonly ICurrentUserService _currentUser;
 
-    public DeleteSubjectCommandHandler(TLearnDbContext context, ILogger<DeleteSubjectCommandHandler> logger)
+    public DeleteSubjectHandler(
+        TLearnDbContext context,
+        ICurrentUserService currentUser)
     {
         _context = context;
-        _logger = logger;
+        _currentUser = currentUser;
     }
 
-    public async Task<Result<bool>> Handle(DeleteSubjectCommand request, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(
+        DeleteSubjectCommand request,
+        CancellationToken ct)
     {
-        try
+        var currentUserId = _currentUser.UserId;
+
+        if (!currentUserId.HasValue)
         {
-            var subject = await _context.Subjects
-                .Include(s => s.Materials)
-                .FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
-
-            if (subject == null)
-                return Result<bool>.Failure($"Subject with id '{request.Id}' was not found.");
-
-            if (subject.UserId != request.UserId)
-                return Result<bool>.Failure("You don't have permission to delete this subject.");
-
-            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-            
-            try
-            {
-                _context.Subjects.Remove(subject);
-                await _context.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
-
-                return Result<bool>.Success(true);
-            }
-            catch (DbUpdateException ex)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                _logger.LogError(ex, "Database error while deleting subject {SubjectId}", request.Id);
-                
-                if (ex.InnerException?.Message.Contains("REFERENCE") == true)
-                    return Result<bool>.Failure("Cannot delete subject because it has associated materials. Please delete them first.");
-                
-                throw new SqlException("Failed to delete subject", ex);
-            }
+            return Result<bool>.Failure("Chưa đăng nhập");
         }
-        catch (Exception ex) when (ex is not SqlException)
+
+        var subject = await _context.Subjects
+            .FirstOrDefaultAsync(
+                x => x.Id == request.SubjectId,
+                ct);
+
+        if (subject == null || subject.IsDeleted)
         {
-            _logger.LogError(ex, "Unexpected error while deleting subject {SubjectId}", request.Id);
-            return Result<bool>.Failure("An unexpected error occurred while deleting the subject.");
+            return Result<bool>.Failure("Môn học không tồn tại");
         }
+
+        if (subject.UserId != currentUserId.Value)
+        {
+            return Result<bool>.Failure("Chỉ chủ sở hữu mới có quyền xoá môn học này");
+        }
+
+        subject.IsDeleted = true;
+        subject.DeletedAt = DateTime.UtcNow;
+        subject.DeletedByUserId = currentUserId.Value;
+        subject.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(ct);
+
+        return Result<bool>.Success(true);
     }
 }

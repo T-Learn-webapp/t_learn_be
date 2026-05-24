@@ -36,7 +36,7 @@ public class GetMaterialsBySubjectQueryHandler : IRequestHandler<GetMaterialsByS
 
             var query = _context.LearningMaterials
                 .Include(m => m.Subject)
-                .Where(m => m.SubjectId == request.SubjectId);
+                .Where(m => m.SubjectId == request.SubjectId && m.IsDeleted == false);
 
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {
@@ -64,7 +64,9 @@ public class GetMaterialsBySubjectQueryHandler : IRequestHandler<GetMaterialsByS
                     CreatedAt = m.CreatedAt,
                     UpdatedAt = m.UpdatedAt
                 })
-                .ToListAsync(cancellationToken);
+              
+                .OrderBy(m => m.CreatedAt).ToListAsync(cancellationToken);
+               
 
             var result = new PagedResult<LearningMaterialDto>(materials, totalCount, request.PageNumber, request.PageSize);
             return Result<PagedResult<LearningMaterialDto>>.Success(result);

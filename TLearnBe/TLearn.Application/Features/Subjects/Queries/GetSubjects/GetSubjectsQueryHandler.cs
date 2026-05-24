@@ -24,7 +24,7 @@ public class GetSubjectsQueryHandler : IRequestHandler<GetSubjectsQuery, Result<
     {
         try
         {
-            var query = _context.Subjects.AsQueryable();
+            var query = _context.Subjects.AsQueryable().Where(s=>s.IsDeleted == false);
 
             // Filter by user or public
             if (request.UserId.HasValue)

@@ -24,7 +24,7 @@ public class GetSubjectMembersQueryHandler : IRequestHandler<GetSubjectMembersQu
         try
         {
             var subject = await _context.Subjects
-                .FirstOrDefaultAsync(s => s.Id == request.SubjectId, cancellationToken);
+                .FirstOrDefaultAsync(s => s.Id == request.SubjectId && s.IsDeleted== false, cancellationToken);
 
             if (subject == null)
                 return Result<PagedResult<SubjectMemberDto>>.Failure($"Subject with id '{request.SubjectId}' was not found.");

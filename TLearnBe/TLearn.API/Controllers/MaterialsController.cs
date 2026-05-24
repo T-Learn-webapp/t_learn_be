@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using TLearn.Application.Features.Materials.Commands.CreateMaterial;
 using TLearn.Application.Features.Materials.Commands.DeleteMaterial;
 using TLearn.Application.Features.Materials.Commands.UpdateMaterial;
+using TLearn.Application.Features.Materials.Commands.UpdateTitle;
 using TLearn.Application.Features.Materials.DTOs;
 using TLearn.Application.Features.Materials.Queries.GetMaterialById;
 using TLearn.Common;
@@ -39,7 +40,7 @@ public class MaterialsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(result.Data);
+        return Ok(result);
     }
 
     [HttpPost]
@@ -64,19 +65,58 @@ public class MaterialsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(result.Data);
+        return Ok(result);
+    }
+    
+    [HttpPatch("{id:guid}/info")]
+    public async Task<IActionResult> UpdateInfo(
+        Guid id,
+        [FromBody] UpdateMaterialInfoRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Chưa đăng nhập"
+            });
+        }
+
+        var command = new UpdateMaterialInfoCommand
+        {
+            MaterialId = id,
+            UserId = Guid.Parse(userId),
+            Title = request.Title,
+            Summary = request.Description
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteMaterial(Guid id)
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken ct)
     {
-        var command = new DeleteMaterialCommand { Id = id, UserId = GetUserId() };
-        var result = await _mediator.Send(command);
-        
+        var result = await _mediator.Send(
+            new DeleteLearningMaterialCommand(id),
+            ct);
+
         if (!result.IsSuccess)
-            return BadRequest(new { message = result.Error });
-        
-        return NoContent();
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
     }
     
     [HttpGet("{id}/collaboration-info")]

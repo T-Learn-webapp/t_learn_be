@@ -56,7 +56,7 @@ public class InvitationsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(new { message = $"Invitation sent to {request.Email}" });
+        return Ok(result);
     }
 
     // POST: api/invitations/accept
@@ -78,12 +78,7 @@ public class InvitationsController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
         
-        return Ok(new
-        {
-            message = "You have joined the subject successfully!",
-            subjectId = result.Data.SubjectId,
-            subjectName = result.Data.SubjectName
-        });
+        return Ok(result);
     }
 
     // POST: api/invitations/accept-with-registration

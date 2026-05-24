@@ -24,7 +24,7 @@ public class GetMySubjectsQueryHandler : IRequestHandler<GetMySubjectsQuery, Res
     {
         try
         {
-            var query = _context.Subjects.Where(s => s.UserId == request.UserId);
+            var query = _context.Subjects.Where(s => s.UserId == request.UserId && s.IsDeleted == false);
 
             if (request.OnlyPublic.HasValue && request.OnlyPublic.Value)
             {

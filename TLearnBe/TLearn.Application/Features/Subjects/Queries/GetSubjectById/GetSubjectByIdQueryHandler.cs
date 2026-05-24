@@ -24,7 +24,7 @@ public class GetSubjectByIdQueryHandler : IRequestHandler<GetSubjectByIdQuery, R
         {
             var subject = await _context.Subjects
                 .Include(s => s.Materials)
-                .FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
+                .FirstOrDefaultAsync(s => s.Id == request.Id && s.IsDeleted== false, cancellationToken);
 
             if (subject == null)
                 return Result<SubjectDto>.Failure($"Subject with id '{request.Id}' was not found.");

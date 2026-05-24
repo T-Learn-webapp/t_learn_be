@@ -1,10 +1,13 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using TLearn.Application.Features.Subjects.DTOs;
 using TLearn.Common;
 using TLearn.Domain.Entities;
 using TLearn.Infrastructure.Data.Configurations;
+using TLearn.Infrastructure.Hubs;
 
 namespace TLearn.Application.Features.Subjects.Commands.AcceptInvitation;
 
@@ -13,27 +16,31 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
     private readonly TLearnDbContext _context;
     private readonly UserManager<User> _userManager;
     private readonly ILogger<AcceptInvitationCommandHandler> _logger;
+    private readonly IHubContext<SubjectHub> _hubContext;
 
     public AcceptInvitationCommandHandler(
         TLearnDbContext context,
         UserManager<User> userManager,
-        ILogger<AcceptInvitationCommandHandler> logger)
+        ILogger<AcceptInvitationCommandHandler> logger,
+        IHubContext<SubjectHub> hubContext)
     {
         _context = context;
         _userManager = userManager;
         _logger = logger;
+        _hubContext = hubContext;
     }
 
-    public async Task<Result<AcceptInvitationResult>> Handle(AcceptInvitationCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AcceptInvitationResult>> Handle(AcceptInvitationCommand request,
+        CancellationToken cancellationToken)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-        
+
         try
         {
-            
             var invitation = await _context.SubjectInvitations
                 .Include(i => i.Subject)
-                .FirstOrDefaultAsync(i => i.InviteToken == request.Token && i.Status == InvitationStatus.Pending, cancellationToken);
+                .FirstOrDefaultAsync(i => i.InviteToken == request.Token && i.Status == InvitationStatus.Pending,
+                    cancellationToken);
 
             if (invitation == null)
                 return Result<AcceptInvitationResult>.Failure("Invalid or already used invitation.");
@@ -55,27 +62,28 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
                 user = await _userManager.FindByIdAsync(request.UserId.Value.ToString());
                 if (user == null)
                     return Result<AcceptInvitationResult>.Failure("User not found.");
-                
+
                 if (user.Email?.ToLower() != invitation.Email.ToLower())
-                    return Result<AcceptInvitationResult>.Failure("This invitation was sent to a different email address.");
+                    return Result<AcceptInvitationResult>.Failure(
+                        "This invitation was sent to a different email address.");
             }
             else if (!string.IsNullOrEmpty(request.RegisterData?.Password))
             {
-                
                 user = new User
                 {
                     UserName = invitation.Email,
                     Email = invitation.Email,
                     FullName = request.RegisterData.FullName,
-                    EmailConfirmed= true, 
+                    EmailConfirmed = true,
                     SubscriptionType = "Free",
                     CreatedAt = DateTime.UtcNow
                 };
 
                 var createResult = await _userManager.CreateAsync(user, request.RegisterData.Password);
                 if (!createResult.Succeeded)
-                    return Result<AcceptInvitationResult>.Failure(string.Join(", ", createResult.Errors.Select(e => e.Description)));
-                
+                    return Result<AcceptInvitationResult>.Failure(string.Join(", ",
+                        createResult.Errors.Select(e => e.Description)));
+
                 isNewUser = true;
             }
             else
@@ -112,17 +120,63 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
                 invitation.AcceptedUserId = user.Id;
 
                 await _context.SaveChangesAsync(cancellationToken);
+
                 await transaction.CommitAsync(cancellationToken);
 
-                return Result<AcceptInvitationResult>.Success(new AcceptInvitationResult
+                var result = new AcceptInvitationResult
+
                 {
                     SubjectId = invitation.SubjectId,
+
                     SubjectName = invitation.Subject.Name,
+
                     IsNewUser = isNewUser,
+
                     UserId = user.Id,
+
                     Email = user.Email ?? invitation.Email,
+
                     FullName = user.FullName
-                });
+                };
+
+                var realtimeDto = new SubjectMemberJoinedRealtimeDto
+
+                {
+                    SubjectId = invitation.SubjectId,
+
+                    SubjectName = invitation.Subject.Name,
+
+                    UserId = user.Id,
+
+                    Email = user.Email ?? invitation.Email,
+
+                    FullName = user.FullName,
+
+                    Permission = invitation.Permission,
+
+                    InvitedBy = invitation.InvitedBy,
+
+                    JoinedAt = member.JoinedAt,
+
+                    IsNewUser = isNewUser
+                };
+
+                var subjectUserIds = invitation.Subject.Members
+                    .Select(m => m.UserId)
+                    .ToHashSet();
+
+                subjectUserIds.Add(invitation.Subject.UserId);
+
+                subjectUserIds.Add(user.Id);
+
+                foreach (var userId in subjectUserIds)
+                {
+                    await _hubContext.Clients
+                        .Group($"user-{userId}")
+                        .SendAsync("SubjectMemberJoined", realtimeDto, cancellationToken);
+                }
+
+                return Result<AcceptInvitationResult>.Success(result);
             }
             catch (DbUpdateException ex)
             {
@@ -133,8 +187,8 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
         }
         catch (Exception ex)
         {
-                await transaction.RollbackAsync(cancellationToken);
-            
+            await transaction.RollbackAsync(cancellationToken);
+
             _logger.LogError(ex, "Unexpected error while accepting invitation");
             return Result<AcceptInvitationResult>.Failure("An unexpected error occurred.");
         }

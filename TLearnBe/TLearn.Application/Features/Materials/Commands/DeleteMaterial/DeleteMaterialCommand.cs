@@ -3,8 +3,20 @@ using TLearn.Common;
 
 namespace TLearn.Application.Features.Materials.Commands.DeleteMaterial;
 
-public class DeleteMaterialCommand : IRequest<Result<bool>>
+public class DeleteLearningMaterialCommand
+
+    : IRequest<Result<bool>>
+
 {
-    public Guid Id { get; set; }
-    public Guid UserId { get; set; }
+
+    public Guid MaterialId { get; set; }
+
+    public DeleteLearningMaterialCommand(Guid materialId)
+
+    {
+
+        MaterialId = materialId;
+
+    }
+
 }

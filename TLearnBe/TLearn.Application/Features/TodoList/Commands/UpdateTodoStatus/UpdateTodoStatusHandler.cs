@@ -70,7 +70,7 @@ public class UpdateTodoAssignmentStatusHandler
                 .ThenInclude(x => x.Subject)
                 .ThenInclude(x => x.Members)
                 .FirstOrDefaultAsync(
-                    x => x.Id == request.TodoId,
+                    x => x.Id == request.TodoId && x.LearningMaterial.IsDeleted == false, 
                     ct);
 
             if (todo == null)

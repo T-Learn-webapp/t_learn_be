@@ -32,7 +32,9 @@ public class InviteMemberCommandHandler : IRequestHandler<InviteMemberCommand, R
         _logger = logger;
     }
 
-    public async Task<Result<bool>> Handle(InviteMemberCommand request, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(
+        InviteMemberCommand request,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -40,43 +42,56 @@ public class InviteMemberCommandHandler : IRequestHandler<InviteMemberCommand, R
                 .Include(s => s.User)
                 .FirstOrDefaultAsync(s => s.Id == request.SubjectId, cancellationToken);
 
-           
-            
             if (subject == null)
-                return Result<bool>.Failure($"Subject with id '{request.SubjectId}' was not found.");
-            
-           
-            // Check permission
-            if (subject.UserId != request.InvitedBy && !subject.CanUserManage(request.InvitedBy))
-                return Result<bool>.Failure("You don't have permission to invite members to this subject.");
+            {
+                return Result<bool>.Failure(
+                    $"Không tìm thấy môn học với id '{request.SubjectId}'.");
+            }
 
-            // Parse permission
+            // Kiểm tra quyền
+            if (subject.UserId != request.InvitedBy && !subject.CanUserManage(request.InvitedBy))
+            {
+                return Result<bool>.Failure(
+                    "Bạn không có quyền mời thành viên vào môn học này.");
+            }
+
+            // Kiểm tra quyền được truyền lên
             if (!Enum.TryParse<SubjectPermission>(request.Permission, true, out var permission))
-                return Result<bool>.Failure($"Invalid permission. Allowed: ViewOnly, Comment, Edit, Manage");
+            {
+                return Result<bool>.Failure(
+                    "Quyền không hợp lệ. Các quyền được phép: ViewOnly, Comment, Edit, Manage.");
+            }
 
             var invitedEmail = request.Email.ToLower();
-            
-            
+
             var existingMember = await _context.SubjectMembers
-                .AnyAsync(m => m.SubjectId == request.SubjectId && m.User.Email == invitedEmail, cancellationToken);
-            
+                .AnyAsync(
+                    m => m.SubjectId == request.SubjectId &&
+                         m.User.Email == invitedEmail,
+                    cancellationToken);
+
             if (existingMember)
-                return Result<bool>.Failure($"{invitedEmail} is already a member of this subject.");
+            {
+                return Result<bool>.Failure(
+                    $"{invitedEmail} đã là thành viên của môn học này.");
+            }
 
-            
             var existingInvitation = await _context.SubjectInvitations
-                .FirstOrDefaultAsync(i => i.SubjectId == request.SubjectId && 
-                                          i.Email == invitedEmail && 
-                                          i.Status == InvitationStatus.Pending, cancellationToken);
-            
-            if (existingInvitation != null)
-                return Result<bool>.Failure($"An invitation has already been sent to {invitedEmail}. Please wait for them to respond.");
+                .FirstOrDefaultAsync(
+                    i => i.SubjectId == request.SubjectId &&
+                         i.Email == invitedEmail &&
+                         i.Status == InvitationStatus.Pending,
+                    cancellationToken);
 
-            
+            if (existingInvitation != null)
+            {
+                return Result<bool>.Failure(
+                    $"Lời mời đã được gửi tới {invitedEmail}. Vui lòng chờ người dùng phản hồi.");
+            }
+
             var inviteToken = Guid.NewGuid().ToString();
             var expiryDays = _config.GetValue<int>("SubjectInvitation:ExpiryDays", 7);
-            
-            
+
             var existingUser = await _userManager.FindByEmailAsync(invitedEmail);
             var isExistingUser = existingUser != null;
 
@@ -92,38 +107,39 @@ public class InviteMemberCommandHandler : IRequestHandler<InviteMemberCommand, R
                 CreatedAt = DateTime.UtcNow
             };
 
-            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
                 _context.SubjectInvitations.Add(invitation);
+
                 await _context.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
-                
                 var frontendUrl = _config["FrontendUrl"] ?? "http://localhost:3000";
                 var acceptUrl = $"{frontendUrl}/accept-invitation?token={inviteToken}";
-                
+
                 if (isExistingUser)
                 {
-                    
                     await _emailService.SendSubjectInvitationEmail(
-                        invitedEmail, 
-                        subject.Name, 
-                        acceptUrl, 
+                        invitedEmail,
+                        subject.Name,
+                        acceptUrl,
                         permission.ToString(),
                         existingUser.FullName);
                 }
                 else
                 {
-                    
-                    var registerUrl = $"{frontendUrl}/register?email={Uri.EscapeDataString(invitedEmail)}&inviteToken={inviteToken}";
+                    var registerUrl =
+                        $"{frontendUrl}/register?email={Uri.EscapeDataString(invitedEmail)}&inviteToken={inviteToken}";
+
                     await _emailService.SendSubjectRegistrationInvitationEmail(
                         invitedEmail,
                         subject.Name,
                         registerUrl,
                         permission.ToString(),
-                        subject.User?.FullName ?? "Subject owner");
+                        subject.User?.FullName ?? "Chủ sở hữu môn học");
                 }
 
                 return Result<bool>.Success(true);
@@ -131,14 +147,19 @@ public class InviteMemberCommandHandler : IRequestHandler<InviteMemberCommand, R
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                _logger.LogError(ex, "Error while inviting member");
-                return Result<bool>.Failure("Failed to send invitation. Please try again.");
+
+                _logger.LogError(ex, "Lỗi khi mời thành viên vào môn học");
+
+                return Result<bool>.Failure(
+                    "Không thể gửi lời mời. Vui lòng thử lại.");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error while inviting member");
-            return Result<bool>.Failure("An unexpected error occurred while sending invitation.");
+            _logger.LogError(ex, "Lỗi không xác định khi mời thành viên");
+
+            return Result<bool>.Failure(
+                "Đã xảy ra lỗi không xác định khi gửi lời mời.");
         }
     }
 }

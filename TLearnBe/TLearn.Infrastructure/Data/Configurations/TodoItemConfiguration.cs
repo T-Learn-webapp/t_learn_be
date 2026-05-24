@@ -8,7 +8,7 @@ public class TodoItemConfiguration : IEntityTypeConfiguration<TodoItem>
 {
     public void Configure(EntityTypeBuilder<TodoItem> builder)
     {
-      
+        builder.HasQueryFilter(x => !x.IsDeleted);
 
         builder.HasOne(x => x.LearningMaterial)
             .WithMany()

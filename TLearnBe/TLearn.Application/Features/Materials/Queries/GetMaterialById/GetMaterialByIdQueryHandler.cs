@@ -25,7 +25,7 @@ public class GetMaterialByIdQueryHandler : IRequestHandler<GetMaterialByIdQuery,
             var material = await _context.LearningMaterials
                 .Include(m => m.Subject)
                 .Include(m => m.Flashcards)
-                .FirstOrDefaultAsync(m => m.Id == request.Id, cancellationToken);
+                .FirstOrDefaultAsync(m => m.Id == request.Id && m.IsDeleted == false, cancellationToken);
 
             if (material == null)
                 return Result<LearningMaterialDto>.Failure($"Material with id '{request.Id}' was not found.");

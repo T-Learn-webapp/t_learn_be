@@ -50,7 +50,7 @@ public class CreateTodoHandler
                 .Include(x => x.Subject)
                 .ThenInclude(x => x.Members)
                 .FirstOrDefaultAsync(
-                    x => x.Id == request.LearningMaterialId,
+                    x => x.Id == request.LearningMaterialId && x.IsDeleted == false,
                     ct);
 
             if (material == null)

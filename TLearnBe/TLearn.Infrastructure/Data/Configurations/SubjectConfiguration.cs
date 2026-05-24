@@ -8,6 +8,7 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
 {
     public void Configure(EntityTypeBuilder<Subject> builder)
     {
+        builder.HasQueryFilter(x => !x.IsDeleted);
         builder.Property(s => s.Name).IsRequired().HasMaxLength(200);
         builder.Property(s => s.Color).HasMaxLength(7);
         
