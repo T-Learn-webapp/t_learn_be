@@ -17,5 +17,10 @@ public class FlashcardConfiguration : IEntityTypeConfiguration<Flashcard>
             .WithMany(m => m.Flashcards)
             .HasForeignKey(x => x.MaterialId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        builder.HasOne(x => x.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.NoAction);
+       
     }
 }

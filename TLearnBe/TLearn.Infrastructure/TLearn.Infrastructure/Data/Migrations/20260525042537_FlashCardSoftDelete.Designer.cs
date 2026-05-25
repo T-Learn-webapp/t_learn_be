@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TLearn.Infrastructure.Data.Configurations;
 
@@ -11,9 +12,11 @@ using TLearn.Infrastructure.Data.Configurations;
 namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(TLearnDbContext))]
-    partial class TLearnDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260525042537_FlashCardSoftDelete")]
+    partial class FlashCardSoftDelete
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

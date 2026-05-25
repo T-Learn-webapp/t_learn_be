@@ -13,6 +13,7 @@ public class TLearnDbContext : IdentityDbContext<User, Role, Guid>
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<LearningMaterial> LearningMaterials { get; set; }
     public DbSet<Flashcard> Flashcards { get; set; }
+    public DbSet<UserFlashcardProgress> UserFlashcardProgresses { get; set; }
     public DbSet<Question> Questions { get; set; }
     public DbSet<Quiz> Quizzes { get; set; }
     public DbSet<UserProgress> UserProgresses { get; set; }
