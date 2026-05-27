@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TLearn.Application.Features.Materials.Commands.CreateMaterial;
 using TLearn.Application.Features.Materials.Commands.DeleteMaterial;
+using TLearn.Application.Features.Materials.Commands.SummaryMaterial;
 using TLearn.Application.Features.Materials.Commands.UpdateMaterial;
 using TLearn.Application.Features.Materials.Commands.UpdateTitle;
 using TLearn.Application.Features.Materials.DTOs;
@@ -41,6 +42,26 @@ public class MaterialsController : ControllerBase
 
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
+
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/summarize-ai")]
+    public async Task<IActionResult> SummarizeByAi(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var command = new SummarizeMaterialByAiCommand
+        {
+            MaterialId = id
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
 
         return Ok(result);
     }

@@ -7,6 +7,7 @@ using System.Text;
 using StackExchange.Redis;
 using TLearn.API.Extensions;
 using TLearn.API.Hubs;
+using TLearn.Application.Features.FlashCards.Commons;
 using TLearn.Infrastructure.Data.Configurations;
 using TLearn.Infrastructure.Hubs;
 using TLearn.Infrastructure.Services;
@@ -78,7 +79,15 @@ builder.Services.AddAuthentication(options =>
 
 
 // === DI Services ===
+builder.Services.AddHttpClient<OllamaAiService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(120);
+});
+
+
 builder.Services.AddHttpContextAccessor(); 
+builder.Services.AddHttpClient<OllamaAiService>();
+builder.Services.AddScoped<IAiService, OllamaAiService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IRedisService, RedisService>();
 builder.Services.AddScoped<ITokenService, TokenService>();

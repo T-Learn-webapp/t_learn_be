@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using TLearn.Application.Features.FlashCards.Commands.CreateFlashCard;
 using TLearn.Application.Features.FlashCards.Commands.CreateManyFlashcard;
 using TLearn.Application.Features.FlashCards.Commands.DeleteFlashcard;
+using TLearn.Application.Features.FlashCards.Commands.GenerateFlashcardsByAi;
 using TLearn.Application.Features.FlashCards.Commands.UpdateFlashCard;
 using TLearn.Application.Features.FlashCards.Commands.UpdateFlashCardProgress;
+using TLearn.Application.Features.FlashCards.Commands.UpdateManyFlashCard;
 using TLearn.Application.Features.FlashCards.DTOs.Requests;
 using TLearn.Application.Features.FlashCards.Queries.GetDueFlashcards;
 using TLearn.Application.Features.FlashCards.Queries.GetFlashcardByMaterial;
@@ -39,10 +41,25 @@ public class FlashcardsController : ControllerBase
 
         return Ok(result);
     }
-    
+
     [HttpPost("many")]
     public async Task<IActionResult> CreateMany(
         [FromBody] CreateManyFlashcardsCommand command,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    [HttpPost("generate-ai")]
+    public async Task<IActionResult> GenerateByAi(
+        [FromBody] GenerateFlashcardsByAiCommand command,
         CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(command, cancellationToken);
@@ -130,6 +147,23 @@ public class FlashcardsController : ControllerBase
             Hint = request.Hint
         };
 
+        var result = await _mediator.Send(command, cancellationToken);
+
+        if (!result.IsSuccess)
+
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+
+    [HttpPut("many")]
+    public async Task<IActionResult> UpdateMany(
+        [FromBody] UpdateManyFlashcardsCommand command,
+        CancellationToken cancellationToken)
+
+    {
         var result = await _mediator.Send(command, cancellationToken);
 
         if (!result.IsSuccess)

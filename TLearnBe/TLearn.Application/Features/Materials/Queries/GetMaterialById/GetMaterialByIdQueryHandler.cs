@@ -23,7 +23,7 @@ public class GetMaterialByIdQueryHandler : IRequestHandler<GetMaterialByIdQuery,
         try
         {
             var material = await _context.LearningMaterials
-                .Include(m => m.Subject)
+                .Include(m => m.Subject).ThenInclude(s=>s.Members)
                 .Include(m => m.Flashcards)
                 .FirstOrDefaultAsync(m => m.Id == request.Id && m.IsDeleted == false, cancellationToken);
 
@@ -34,7 +34,7 @@ public class GetMaterialByIdQueryHandler : IRequestHandler<GetMaterialByIdQuery,
             // 1. The subject is public, OR
             // 2. User owns the subject, OR
             // 3. User owns the material
-            if(material.Subject.CanUserView(request.UserId.Value))
+            if(!material.Subject.CanUserView(request.UserId.Value))
                 return Result<LearningMaterialDto>.Failure("You don't have permission to view this material.");
             
 
