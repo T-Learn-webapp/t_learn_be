@@ -10,4 +10,5 @@ public class GetFlashcardsByMaterialQuery
 {
     public Guid MaterialId { get; set; }
     public string? SearchTerm { get; set; }
+    public FlashcardLearningStatus? Status { get; set; }
 }

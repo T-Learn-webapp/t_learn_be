@@ -71,8 +71,6 @@ public class UserFlashcardProgress
 
 public enum FlashcardReviewQuality
 {
-    Again = 1, // Quên, học lại
-    Hard = 2, // Khó
-    Good = 3, // Nhớ được
-    Easy = 4 // Dễ
+    Again = 1, // Không nhớ
+    Good = 2   // Nhớ
 }

@@ -136,13 +136,6 @@ public class UpdateFlashcardProgressCommandHandler
                 progress.NextReviewDate = DateTime.UtcNow.AddDays(1);
                 break;
 
-            case FlashcardReviewQuality.Hard:
-                progress.RepetitionCount += 1;
-                progress.Interval = Math.Max(1, progress.Interval + 1);
-                progress.EaseFactor = Math.Max(1.3, progress.EaseFactor - 0.15);
-                progress.NextReviewDate = DateTime.UtcNow.AddDays(progress.Interval);
-                break;
-
             case FlashcardReviewQuality.Good:
                 progress.RepetitionCount += 1;
 
@@ -159,22 +152,7 @@ public class UpdateFlashcardProgressCommandHandler
                     progress.Interval = (int)Math.Round(progress.Interval * progress.EaseFactor);
                 }
 
-                progress.NextReviewDate = DateTime.UtcNow.AddDays(progress.Interval);
-                break;
-
-            case FlashcardReviewQuality.Easy:
-                progress.RepetitionCount += 1;
-                progress.EaseFactor += 0.15;
-
-                if (progress.RepetitionCount == 1)
-                {
-                    progress.Interval = 4;
-                }
-                else
-                {
-                    progress.Interval = (int)Math.Round(progress.Interval * progress.EaseFactor * 1.3);
-                }
-
+                progress.EaseFactor = Math.Min(3.0, progress.EaseFactor + 0.05);
                 progress.NextReviewDate = DateTime.UtcNow.AddDays(progress.Interval);
                 break;
         }

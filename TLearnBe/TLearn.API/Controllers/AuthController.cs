@@ -45,7 +45,7 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
-    [Authorize]
+    
     public async Task<IActionResult> GetMe()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -59,7 +59,7 @@ public class AuthController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(new { message = result.Error });
 
-        return Ok(result); // result.Data là UserDto, đã khớp với interface
+        return Ok(result); 
     }
 
     [HttpPost("login")]

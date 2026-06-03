@@ -19,6 +19,8 @@ public class GenerateFlashcardsByAiCommandHandler
     private readonly ICurrentUserService _currentUser;
 
     private readonly IAiService _flashcardAiService;
+    
+    private readonly IAiUsageLimiter _aiUsageLimiter;
 
     private readonly ILogger<GenerateFlashcardsByAiCommandHandler> _logger;
 
@@ -26,6 +28,7 @@ public class GenerateFlashcardsByAiCommandHandler
         TLearnDbContext context,
         ICurrentUserService currentUser,
         IAiService flashcardAiService,
+        IAiUsageLimiter aiUsageLimiter,
         ILogger<GenerateFlashcardsByAiCommandHandler> logger)
 
     {
@@ -34,6 +37,8 @@ public class GenerateFlashcardsByAiCommandHandler
         _currentUser = currentUser;
 
         _flashcardAiService = flashcardAiService;
+        
+        _aiUsageLimiter = aiUsageLimiter;
 
         _logger = logger;
     }
@@ -46,12 +51,23 @@ public class GenerateFlashcardsByAiCommandHandler
         try
 
         {
+           
             var currentUserId = _currentUser.UserId;
 
             if (!currentUserId.HasValue)
 
             {
                 return Result<List<AiGeneratedFlashcardDto>>.Failure("Chưa đăng nhập.");
+            }
+            
+            var usageCheck = await _aiUsageLimiter.CheckAsync(
+                currentUserId.Value,
+                cancellationToken);
+
+            if (!usageCheck.IsAllowed)
+            {
+                return Result<List<AiGeneratedFlashcardDto>>.Failure(
+                    usageCheck.ErrorMessage ?? "Bạn đã vượt quá giới hạn sử dụng AI.");
             }
 
             if (request.Count <= 0 || request.Count > 20)
@@ -162,7 +178,12 @@ public class GenerateFlashcardsByAiCommandHandler
                 return Result<List<AiGeneratedFlashcardDto>>.Failure(
                     "AI không tạo được flashcard hợp lệ.");
             }
-
+            await _aiUsageLimiter.RecordAsync(
+                currentUserId.Value,
+                "GenerateFlashcards",
+                cancellationToken);
+            
+            
             return Result<List<AiGeneratedFlashcardDto>>.Success(
                 aiFlashcards.Take(request.Count).ToList());
         }
@@ -205,6 +226,7 @@ public class GenerateFlashcardsByAiCommandHandler
                     : sourceContent;
             }
 
+            
             var contentForSummary = string.Join(
                 "\n\n--- PHẦN TIẾP THEO ---\n\n",
                 chunks);

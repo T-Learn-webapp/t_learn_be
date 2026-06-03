@@ -8,6 +8,8 @@ public class Subscription
     public User User { get; set; } = null!;
 
     public string PlanType { get; set; } = string.Empty; // PremiumMonthly, PremiumYearly
+    
+    public string PlanName { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public bool IsActive { get; set; } = true;

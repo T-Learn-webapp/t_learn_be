@@ -17,6 +17,7 @@ public class SummarizeMaterialByAiCommandHandler
     private readonly ICurrentUserService _currentUser;
 
     private readonly IAiService _flashcardAiService;
+    private readonly IAiUsageLimiter _aiUsageLimiter;
 
     private readonly ILogger<SummarizeMaterialByAiCommandHandler> _logger;
 
@@ -24,13 +25,14 @@ public class SummarizeMaterialByAiCommandHandler
         TLearnDbContext context,
         ICurrentUserService currentUser,
         IAiService flashcardAiService,
+        IAiUsageLimiter usageLimiter,
         ILogger<SummarizeMaterialByAiCommandHandler> logger)
 
     {
         _context = context;
 
         _currentUser = currentUser;
-
+        _aiUsageLimiter = usageLimiter;
         _flashcardAiService = flashcardAiService;
 
         _logger = logger;
@@ -52,6 +54,15 @@ public class SummarizeMaterialByAiCommandHandler
                 return Result<LearningMaterialDto>.Failure("Chưa đăng nhập.");
             }
 
+            var usageCheck = await _aiUsageLimiter.CheckAsync(
+                currentUserId.Value,
+                cancellationToken);
+
+            if (!usageCheck.IsAllowed)
+            {
+                return Result<LearningMaterialDto>.Failure(
+                    usageCheck.ErrorMessage ?? "Bạn đã vượt quá giới hạn sử dụng AI.");
+            }
             var material = await _context.LearningMaterials
                 .Include(x => x.Subject)
                 .ThenInclude(x => x.Members)
@@ -128,6 +139,10 @@ public class SummarizeMaterialByAiCommandHandler
                 UpdatedAt = material.UpdatedAt
             };
 
+            await _aiUsageLimiter.RecordAsync(
+                currentUserId.Value,
+                "SummarizeMaterial",
+                cancellationToken);
             return Result<LearningMaterialDto>.Success(dto);
         }
 

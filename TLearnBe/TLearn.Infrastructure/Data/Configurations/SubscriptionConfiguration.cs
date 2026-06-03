@@ -11,6 +11,18 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.PlanType).IsRequired().HasMaxLength(50);
+        builder.Property(x => x.PlanName)
+            .HasMaxLength(200)
+            .IsRequired();
+
+        builder.Property(x => x.PayOSOrderCode)
+            .HasMaxLength(100);
+
+        builder.HasIndex(x => x.PayOSOrderCode)
+            .IsUnique()
+            .HasFilter("[PayOSOrderCode] IS NOT NULL");
+
+        builder.HasIndex(x => new { x.UserId, x.IsActive, x.EndDate });
 
         builder.HasOne(x => x.User)
             .WithMany(u => u.Subscriptions)

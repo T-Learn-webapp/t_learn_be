@@ -6,6 +6,7 @@ using TLearn.Application.Features.FlashCards.Commons;
 using TLearn.Application.Features.FlashCards.DTOs;
 using TLearn.Common;
 using TLearn.Common.Pagination;
+using TLearn.Domain.Entities;
 using TLearn.Infrastructure.Data.Configurations;
 using TLearn.Infrastructure.Services;
 
@@ -51,7 +52,8 @@ public class GetFlashcardsByMaterialQueryHandler
 
             var canUseCache =
                 string.IsNullOrWhiteSpace(request.SearchTerm) &&
-                request.PageNumber == 1;
+                request.PageNumber == 1 &&
+                request.Status == null;
 
             if (canUseCache)
             {
@@ -110,6 +112,42 @@ public class GetFlashcardsByMaterialQueryHandler
                     (x.Hint != null && x.Hint.ToLower().Contains(searchTerm)));
             }
 
+            var now = DateTime.UtcNow;
+
+            if (request.Status.HasValue)
+            {
+                query = request.Status.Value switch
+                {
+                    FlashcardLearningStatus.NotStudied => query.Where(x =>
+                        !x.UserProgresses.Any(p => p.UserId == currentUserId.Value)),
+
+                    FlashcardLearningStatus.Studied => query.Where(x =>
+                        x.UserProgresses.Any(p =>
+                            p.UserId == currentUserId.Value &&
+                            p.LastReviewedAt != null)),
+
+                    FlashcardLearningStatus.NeedReview => query.Where(x =>
+                        x.UserProgresses.Any(p =>
+                            p.LastQuality == FlashcardReviewQuality.Again &&
+                            p.UserId == currentUserId.Value 
+                            // &&
+                            // p.NextReviewDate != null &&
+                            // p.NextReviewDate <= now
+                            )
+                        )
+                    ,
+
+                    FlashcardLearningStatus.Remembered => query.Where(x =>
+                        x.UserProgresses.Any(p =>
+                            p.UserId == currentUserId.Value &&
+                            p.LastQuality == FlashcardReviewQuality.Good &&
+                            p.NextReviewDate != null &&
+                            p.NextReviewDate > now)),
+
+                    _ => query
+                };
+            }
+
             var totalCount = await query.CountAsync(cancellationToken);
 
             var items = await query
@@ -141,7 +179,20 @@ public class GetFlashcardsByMaterialQueryHandler
                             LastReviewedAt = p.LastReviewedAt,
                             LastQuality = p.LastQuality
                         })
-                        .FirstOrDefault()
+                        .FirstOrDefault(),
+
+                    LearningStatus = !x.UserProgresses.Any(p => p.UserId == currentUserId.Value)
+                        ? FlashcardLearningStatus.NotStudied
+                        : x.UserProgresses.Any(p =>
+                            p.UserId == currentUserId.Value &&
+                            p.NextReviewDate != null &&
+                            p.NextReviewDate <= now)
+                            ? FlashcardLearningStatus.NeedReview
+                            : x.UserProgresses.Any(p =>
+                                p.UserId == currentUserId.Value &&
+                                p.LastQuality == FlashcardReviewQuality.Good)
+                                ? FlashcardLearningStatus.Remembered
+                                : FlashcardLearningStatus.Studied
                 })
                 .ToListAsync(cancellationToken);
 

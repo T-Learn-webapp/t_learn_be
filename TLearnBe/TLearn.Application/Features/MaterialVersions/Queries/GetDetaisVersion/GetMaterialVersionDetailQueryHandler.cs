@@ -64,6 +64,7 @@ public class GetMaterialVersionDetailQueryHandler
                     YjsSnapshot = x.YjsSnapshot,
                     EditedByUserId = x.EditedByUserId,
                     EditedByUserName = x.EditedByUser.FullName,
+                    ContributorsJson = x.ContributorsJson,
                     CreatedAt = x.CreatedAt,
                     ChangeNote = x.ChangeNote
                 })

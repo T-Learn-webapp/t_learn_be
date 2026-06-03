@@ -125,6 +125,31 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TLearn.Domain.Entities.AiUsageLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Feature")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "UsedAt");
+
+                    b.HasIndex("UserId", "Feature", "UsedAt");
+
+                    b.ToTable("AiUsageLogs");
+                });
+
             modelBuilder.Entity("TLearn.Domain.Entities.Flashcard", b =>
                 {
                     b.Property<Guid>("Id")
@@ -248,6 +273,9 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.Property<string>("Content")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ContributorsJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -338,15 +366,36 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Currency")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("DurationDays")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ExpiredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastPayOSStatus")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PayOSOrderCode")
                         .IsRequired()
@@ -354,13 +403,29 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PayOSPaymentLinkId")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PaymentMethod")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PlanName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PlanType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RawWebhookJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RefundReason")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<decimal?>("RefundedAmount")
                         .HasColumnType("decimal(18,2)");
@@ -376,9 +441,17 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("WebhookReceivedCount")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("PayOSOrderCode")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "ExpiresAt");
+
+                    b.HasIndex("UserId", "Status");
 
                     b.ToTable("Payments");
                 });
@@ -754,7 +827,13 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("PayOSOrderCode")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PlanName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PlanType")
                         .IsRequired()
@@ -769,9 +848,92 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("PayOSOrderCode")
+                        .IsUnique()
+                        .HasFilter("[PayOSOrderCode] IS NOT NULL");
+
+                    b.HasIndex("UserId", "IsActive", "EndDate");
 
                     b.ToTable("Subscriptions");
+                });
+
+            modelBuilder.Entity("TLearn.Domain.Entities.SubscriptionPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("DurationDays")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PlanName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PlanType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanType")
+                        .IsUnique();
+
+                    b.ToTable("SubscriptionPlans");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
+                            Amount = 49000m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Currency = "VND",
+                            Description = "Nâng cấp tài khoản Vip trong 1 tháng",
+                            DurationDays = 30,
+                            IsActive = true,
+                            PlanName = "Vip 1 tháng",
+                            PlanType = "PremiumMonthly",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
+                            Amount = 499000m,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Currency = "VND",
+                            Description = "Nâng cấp tài khoản Vip trong 1 năm",
+                            DurationDays = 365,
+                            IsActive = true,
+                            PlanName = "Vip 1 năm",
+                            PlanType = "PremiumYearly",
+                            SortOrder = 2
+                        });
                 });
 
             modelBuilder.Entity("TLearn.Domain.Entities.TodoAssignment", b =>
@@ -1208,6 +1370,17 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TLearn.Domain.Entities.AiUsageLog", b =>
+                {
+                    b.HasOne("TLearn.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TLearn.Domain.Entities.Flashcard", b =>
                 {
                     b.HasOne("TLearn.Domain.Entities.User", "CreatedByUser")
@@ -1281,7 +1454,7 @@ namespace TLearn.Infrastructure.TLearn.Infrastructure.Data.Migrations
                     b.HasOne("TLearn.Domain.Entities.User", "User")
                         .WithMany("Payments")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("User");

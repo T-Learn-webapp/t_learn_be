@@ -54,6 +54,10 @@ public class LearningMaterialVersion
     public Guid EditedByUserId { get; set; }
 
     public User EditedByUser { get; set; } = null!;
+    
+    // Danh sách người đang cùng tham gia chỉnh sửa tại thời điểm lưu
+
+    public string? ContributorsJson { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -78,7 +78,8 @@ public class CollaborationHub : Hub
                 UserId = userId,
                 ConnectionId = Context.ConnectionId,
                 UserName = user.FullName,
-                UserEmail = user.Email
+                UserEmail = user.Email,
+                UserColor = GetUserColor(userId)
             });
         }
 
@@ -96,7 +97,8 @@ public class CollaborationHub : Hub
                     UserId = userId,
                     ConnectionId = Context.ConnectionId,
                     UserName = user.FullName,
-                    UserEmail = user.Email
+                    UserEmail = user.Email,
+                    UserColor = GetUserColor(userId)
                 });
 
         await Clients.Caller.SendAsync(
@@ -111,7 +113,8 @@ public class CollaborationHub : Hub
                 UserId = userId,
                 ConnectionId = Context.ConnectionId,
                 UserName = user.FullName,
-                UserEmail = user.Email
+                UserEmail = user.Email,
+                UserColor = GetUserColor(userId)
             });
     }
 
@@ -149,9 +152,23 @@ public class CollaborationHub : Hub
     {
         _logger.LogDebug("SendOperation called for material {MaterialId}", materialId);
 
-        // Broadcast operation to all clients in the group EXCEPT the sender
+        var userId = Context.UserIdentifier;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new HubException("Người dùng không hợp lệ");
+        }
+
         await Clients.GroupExcept($"material-{materialId}", Context.ConnectionId)
-            .SendAsync("ReceiveOperation", operation, Context.ConnectionId);
+            .SendAsync(
+                "ReceiveOperation",
+                new
+                {
+                    Operation = operation,
+                    UserId = userId,
+                    ConnectionId = Context.ConnectionId,
+                    UserColor = GetUserColor(userId)
+                });
     }
 
     public async Task SaveSnapshot(
@@ -211,6 +228,7 @@ public class CollaborationHub : Hub
             }
 
             var nextVersion = material.Version + 1;
+            var contributors = GetRoomContributors(materialId);
 
             var history = new LearningMaterialVersion
             {
@@ -221,6 +239,7 @@ public class CollaborationHub : Hub
                 Summary = material.Summary,
                 YjsSnapshot = snapshot,
                 EditedByUserId = userGuid,
+                ContributorsJson = JsonSerializer.Serialize(contributors),
                 CreatedAt = DateTime.UtcNow,
                 ChangeNote = "Lưu nội dung từ cộng tác realtime"
             };
@@ -250,7 +269,8 @@ public class CollaborationHub : Hub
                         MaterialId = material.Id,
                         Version = nextVersion,
                         UpdatedAt = material.UpdatedAt,
-                        UpdatedByUserId = userGuid
+                        UpdatedByUserId = userGuid,
+                        Contributors = contributors
                     });
         }
         catch (Exception ex)
@@ -335,6 +355,48 @@ public class CollaborationHub : Hub
 
         await base.OnDisconnectedAsync(exception);
     }
+
+    private static List<OnlineUser> GetRoomContributors(string materialId)
+    {
+        if (!_rooms.TryGetValue(materialId, out var users))
+        {
+            return new List<OnlineUser>();
+        }
+
+        lock (users)
+        {
+            return users
+                .GroupBy(x => x.UserId)
+                .Select(g => g.First())
+                .Select(x => new OnlineUser
+                {
+                    UserId = x.UserId,
+                    ConnectionId = x.ConnectionId,
+                    UserName = x.UserName,
+                    UserEmail = x.UserEmail,
+                    UserColor = x.UserColor
+                })
+                .ToList();
+        }
+    }
+
+    private static string GetUserColor(string userId)
+    {
+        var colors = new[]
+        {
+            "#22C55E",
+            "#3B82F6",
+            "#F97316",
+            "#A855F7",
+            "#EF4444",
+            "#14B8A6",
+            "#EAB308",
+            "#EC4899"
+        };
+
+        var hash = Math.Abs(userId.GetHashCode());
+        return colors[hash % colors.Length];
+    }
 }
 
 public class OnlineUser
@@ -347,4 +409,6 @@ public class OnlineUser
     public string? UserName { get; set; }
 
     public string? UserEmail { get; set; }
+
+    public string? UserColor { get; set; }
 }

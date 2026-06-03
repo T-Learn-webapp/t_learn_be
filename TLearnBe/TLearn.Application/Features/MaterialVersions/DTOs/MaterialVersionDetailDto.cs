@@ -19,6 +19,7 @@ public class MaterialVersionDetailDto
     public Guid EditedByUserId { get; set; }
 
     public string EditedByUserName { get; set; } = string.Empty;
+    public string? ContributorsJson { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

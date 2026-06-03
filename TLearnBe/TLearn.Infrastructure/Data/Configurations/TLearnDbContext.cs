@@ -9,9 +9,13 @@ public class TLearnDbContext : IdentityDbContext<User, Role, Guid>
     public TLearnDbContext(DbContextOptions<TLearnDbContext> options) : base(options) { }
 
     // DbSets
+    
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
     public DbSet<Subject> Subjects { get; set; }
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<LearningMaterial> LearningMaterials { get; set; }
+    
+    public DbSet<AiUsageLog> AiUsageLogs { get; set; }
     public DbSet<Flashcard> Flashcards { get; set; }
     public DbSet<UserFlashcardProgress> UserFlashcardProgresses { get; set; }
     public DbSet<Question> Questions { get; set; }

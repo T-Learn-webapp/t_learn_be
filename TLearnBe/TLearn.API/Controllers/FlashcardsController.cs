@@ -5,6 +5,7 @@ using TLearn.Application.Features.FlashCards.Commands.CreateFlashCard;
 using TLearn.Application.Features.FlashCards.Commands.CreateManyFlashcard;
 using TLearn.Application.Features.FlashCards.Commands.DeleteFlashcard;
 using TLearn.Application.Features.FlashCards.Commands.GenerateFlashcardsByAi;
+using TLearn.Application.Features.FlashCards.Commands.ResetProgress;
 using TLearn.Application.Features.FlashCards.Commands.UpdateFlashCard;
 using TLearn.Application.Features.FlashCards.Commands.UpdateFlashCardProgress;
 using TLearn.Application.Features.FlashCards.Commands.UpdateManyFlashCard;
@@ -151,6 +152,22 @@ public class FlashcardsController : ControllerBase
 
         if (!result.IsSuccess)
 
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
+    [HttpPost("material/{materialId:guid}/reset-progress")]
+    public async Task<IActionResult> ResetProgress(
+        Guid materialId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new ResetFlashcardProgressCommand(materialId),
+            cancellationToken);
+
+        if (!result.IsSuccess)
         {
             return BadRequest(result);
         }

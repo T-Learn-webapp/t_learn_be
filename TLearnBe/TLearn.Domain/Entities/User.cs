@@ -10,7 +10,7 @@ public class User : IdentityUser<Guid>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public DateTime? LastLoginAt { get; set; }
-    public string SubscriptionType { get; set; } = "Free";
+    public string SubscriptionType { get; set; } = SubscriptionTypes.Free;
 
     // Navigation Properties
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
@@ -34,4 +34,11 @@ public class Role : IdentityRole<Guid>
 {
     public Role() { }
     public Role(string roleName) : base(roleName) { }
+}
+
+public static class SubscriptionTypes
+{
+    public const string Free = "Free";
+
+    public const string Vip = "Vip";
 }
