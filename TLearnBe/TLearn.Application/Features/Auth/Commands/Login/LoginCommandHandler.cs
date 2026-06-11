@@ -40,7 +40,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResp
             return Result<AuthResponse>.Failure("Please verify your email before logging in");
 
         // Tạo token
-        var accessToken = _tokenService.GenerateAccessToken(user);
+        var accessToken = await  _tokenService.GenerateAccessTokenAsync(user);
         var refreshToken = _tokenService.GenerateRefreshToken();
 
         // Lưu refresh token vào Redis

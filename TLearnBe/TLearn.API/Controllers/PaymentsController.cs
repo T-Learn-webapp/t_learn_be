@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TLearn.Application.Features.Payments.Commands;
 using TLearn.Application.Features.Payments.Commands.SyncPaymentStatus;
+using TLearn.Application.Features.Payments.Queries.GetPaymentHistory;
 using TLearn.Application.Features.Payments.Queries.GetPaymentStatus;
 
 namespace TLearn.API.Controllers;
@@ -18,6 +20,47 @@ public class PaymentsController : ControllerBase
 
     {
         _mediator = mediator;
+    }
+
+    [Authorize]
+    [HttpGet("history")]
+    public async Task<IActionResult> GetHistory(
+        [FromQuery] string? status,
+        [FromQuery] string? planType,
+        [FromQuery] string? search,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var userIdValue = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrWhiteSpace(userIdValue) ||
+            !Guid.TryParse(userIdValue, out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Chưa đăng nhập."
+            });
+        }
+
+        var result = await _mediator.Send(
+            new GetPaymentHistoryQuery
+            {
+                UserId = userId,
+                Status = status,
+                PlanType = planType,
+                Search = search,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            },
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
     }
 
     [HttpPost("upgrade")]
@@ -76,7 +119,7 @@ public class PaymentsController : ControllerBase
 
         return Ok(result);
     }
-    
+
     [AllowAnonymous]
     [HttpPost("payos-webhook")]
     public async Task<IActionResult> PayOSWebhook(

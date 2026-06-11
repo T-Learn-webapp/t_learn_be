@@ -81,8 +81,8 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, R
     );
 
     // generate token mới
-    var newAccessToken =
-        _tokenService.GenerateAccessToken(user);
+    var newAccessToken = await
+        _tokenService.GenerateAccessTokenAsync(user);
 
     var newRefreshToken =
         _tokenService.GenerateRefreshToken();

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using TLearn.Domain.Constants;
 using TLearn.Domain.Entities;
+using TLearn.Infrastructure.Services.AdminNotifications;
 using TLearn.Infrastructure.Services.Subscriptions;
 
 namespace TLearn.Infrastructure.Services.Payments;
@@ -9,16 +10,16 @@ public class PaymentStatusService : IPaymentStatusService
 
 {
     private readonly ISubscriptionService _subscriptionService;
-
+    private readonly IAdminNotificationService _adminNotificationService;
     private readonly ILogger<PaymentStatusService> _logger;
 
     public PaymentStatusService(
         ISubscriptionService subscriptionService,
+        IAdminNotificationService adminNotificationService,
         ILogger<PaymentStatusService> logger)
-
     {
         _subscriptionService = subscriptionService;
-
+        _adminNotificationService = adminNotificationService;
         _logger = logger;
     }
 
@@ -35,27 +36,25 @@ public class PaymentStatusService : IPaymentStatusService
             payment.UpdatedAt = DateTime.UtcNow;
 
             _logger.LogInformation(
-                "Payment {OrderCode} đã PAID trước đó, bỏ qua activate subscription.",
+                "Payment {OrderCode} đã PAID trước đó, bỏ qua activate subscription và notification.",
                 payment.PayOSOrderCode);
 
             return;
         }
 
         payment.Status = PaymentStatuses.Paid;
-
         payment.PaidAt ??= DateTime.UtcNow;
-
         payment.RawWebhookJson = rawWebhookJson ?? payment.RawWebhookJson;
-
         payment.LastPayOSStatus = string.IsNullOrWhiteSpace(payOSStatus)
-
             ? PaymentStatuses.Paid
-
             : payOSStatus;
-
         payment.UpdatedAt = DateTime.UtcNow;
 
         await _subscriptionService.ActivateOrExtendVipAsync(
+            payment,
+            cancellationToken);
+
+        await _adminNotificationService.NotifyPaymentPaidAsync(
             payment,
             cancellationToken);
     }

@@ -28,7 +28,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         _emailService = emailService;
         _config = config;
     }
-    
+
     public async Task<AuthResponse> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
         // Kiểm tra email tồn tại
@@ -61,7 +61,8 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         await _emailService.SendVerificationEmail(request.Email, verificationLink);
 
         // Tạo token đăng nhập
-        var accessToken = _tokenService.GenerateAccessToken(user);
+        var accessToken = await
+            _tokenService.GenerateAccessTokenAsync(user);
         var refreshToken = _tokenService.GenerateRefreshToken();
         await _redisService.SetRefreshTokenAsync(user.Id, refreshToken, DateTime.UtcNow.AddDays(7));
 

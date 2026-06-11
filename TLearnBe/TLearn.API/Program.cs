@@ -4,16 +4,22 @@ using TLearn.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using TLearn.API.Extensions;
 using TLearn.API.Hubs;
 using TLearn.Application.Features.FlashCards.Commons;
+using TLearn.Domain.Constants;
+using TLearn.Domain.Entities;
 using TLearn.Infrastructure.Data.Configurations;
 using TLearn.Infrastructure.Hubs;
 using TLearn.Infrastructure.Services;
 using TLearn.Infrastructure.Services.Payments;
 using TLearn.Infrastructure.Services.PayOs;
 using TLearn.Infrastructure.Services.Subscriptions;
+using AppRole = TLearn.Domain.Entities.Role;
+using SubscriptionTypes = TLearn.Domain.Constants.SubscriptionTypes;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +35,7 @@ builder.Services.AddApplicationServices();
 // === Add Authentication ===
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing");
 var key = Encoding.UTF8.GetBytes(jwtKey);
+
 
 builder.Services.AddAuthentication(options =>
     {
@@ -125,7 +132,14 @@ builder.Services.AddSignalR(options =>
 });
 
 // === Authorization ===
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole(AppRoles.Admin);
+    });
+});
 
 // === CORS ===
 builder.Services.AddCors(options =>
@@ -139,8 +153,82 @@ builder.Services.AddCors(options =>
     });
 });
 
+
 // === Build App ===
 var app = builder.Build();
+
+// ===== Run migrations + seed roles + seed admin =====
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<TLearnDbContext>();
+
+    // Nếu bạn đang dùng migrations thì dùng MigrateAsync.
+    // Nếu project bạn vẫn đang dùng EnsureCreatedAsync thì giữ EnsureCreatedAsync,
+    // nhưng khuyến nghị dùng MigrateAsync lâu dài.
+    await dbContext.Database.MigrateAsync();
+
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<AppRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+
+    // ===== Seed Roles =====
+    if (!await roleManager.RoleExistsAsync(AppRoles.Admin))
+    {
+        await roleManager.CreateAsync(new AppRole
+        {
+            Name = AppRoles.Admin,
+            NormalizedName = AppRoles.Admin.ToUpper()
+        });
+    }
+
+    if (!await roleManager.RoleExistsAsync(AppRoles.User))
+    {
+        await roleManager.CreateAsync(new AppRole
+        {
+            Name = AppRoles.User,
+            NormalizedName = AppRoles.User.ToUpper()
+        });
+    }
+
+    // ===== Seed Admin User =====
+    var adminEmail = builder.Configuration["SeedAdmin:Email"] ?? "admin@tlearn.com";
+    var adminPassword = builder.Configuration["SeedAdmin:Password"] ?? "Admin@123456";
+    var adminFullName = builder.Configuration["SeedAdmin:FullName"] ?? "System Admin";
+
+    var adminUser = await userManager.FindByEmailAsync(adminEmail);
+
+    if (adminUser == null)
+    {
+        adminUser = new User
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            FullName = adminFullName,
+            EmailConfirmed = true,
+            IsActive = true,
+            SubscriptionType = SubscriptionTypes.Vip,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var createAdminResult = await userManager.CreateAsync(
+            adminUser,
+            adminPassword);
+
+        if (!createAdminResult.Succeeded)
+        {
+            var errors = string.Join(
+                ", ",
+                createAdminResult.Errors.Select(x => x.Description));
+
+            throw new InvalidOperationException(
+                $"Không thể tạo tài khoản admin mặc định: {errors}");
+        }
+    }
+
+    if (!await userManager.IsInRoleAsync(adminUser, AppRoles.Admin))
+    {
+        await userManager.AddToRoleAsync(adminUser, AppRoles.Admin);
+    }
+}
 
 // === Configure Pipeline ===
 if (app.Environment.IsDevelopment())

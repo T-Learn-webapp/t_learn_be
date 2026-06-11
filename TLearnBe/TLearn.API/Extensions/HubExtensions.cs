@@ -16,6 +16,7 @@ public static class HubExtensions
     {
         
         app.MapHub<NotificationHub>("/hubs/notifications");
+        app.MapHub<AdminHub>("/hubs/admin");
         return app;
     }
 
